@@ -1,0 +1,15 @@
+{
+  "name": "@truce/invoice-lib",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.57.16"
+  }
+}
