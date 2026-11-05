@@ -1,0 +1,8 @@
+{
+  "_note": "EXAMPLE DATA. Fictional merchant for the Truce demo. Not a real business.",
+  "version": 1,
+  "name": "Northlight Design Studio",
+  "signingAddress": "0x19d47570BA52E058bD6432009b2705F799b851Dc",
+  "payoutAddresses": ["0x19d47570BA52E058bD6432009b2705F799b851Dc"],
+  "chainIds": [1874]
+}
