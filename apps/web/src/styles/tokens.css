@@ -1,0 +1,61 @@
+/* Design tokens (tasteskill deal: palette three-stones, type host, radius sharp). The only colour, size and spacing values in the app. */
+:root {
+  --p-bg: #eeecea;
+  --p-surface: #e4e1dd;
+  --p-card: #f8f7f5;
+  --p-ink: #333231;
+  --p-muted: #625f5b;
+  --p-line: rgba(51, 50, 49, 0.14);
+  --p-line-strong: rgba(51, 50, 49, 0.28);
+  --p-accent: #5c6b54;
+  --p-accent-ink: #ffffff;
+  --p-accent-hover: #4d5b46;
+  --p-inv-bg: #333231;
+  --p-inv-surface: #3e3d3c;
+  --p-inv-ink: #eeecea;
+  --p-inv-muted: #adaba9;
+
+  /* state colours, always paired with an icon and a word */
+  --ok: #2c6435;
+  --ok-bg: #e2ece0;
+  --bad: #9e2a20;
+  --bad-bg: #f5e2de;
+  --warn: #7d5300;
+  --warn-bg: #f4ead2;
+  --info: #2f5577;
+  --info-bg: #e1e9f0;
+
+  --font-display: "Host Grotesk", system-ui, sans-serif;
+  --font-text: "Host Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+
+  --t-h1: clamp(40px, 1.6vw + 28px, 52px);
+  --t-h2: clamp(30px, 1.2vw + 22px, 40px);
+  --t-h3: 22px;
+  --t-lead: 18px;
+  --t-card: 18px;
+  --t-body: 16px;
+  --t-small: 14px;
+  --t-label: 13px;
+  --t-stat: 38px;
+
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
+  --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px; --s-10: 128px;
+
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-btn: 4px;
+
+  --nav: 72px;
+  --gut: 80px;
+  --wrap: 1280px;
+  --padt: 120px;
+  --padb: 72px;
+  --btn-h: 44px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+@media (max-width: 1023px) { :root { --gut: 40px; } }
+@media (max-width: 639px) {
+  :root { --nav: 56px; --gut: 24px; --padt: 96px; --padb: 48px; --t-stat: 28px; }
+}
