@@ -10,5 +10,8 @@
   "dependencies": {
     "@truce/invoice-lib": "*",
     "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
   }
 }
