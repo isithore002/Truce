@@ -13,7 +13,8 @@
     "gate": "npm --prefix gate run gate",
     "radar": "node tools/competitor-radar.js --pages 6 --since 2026-11-03T00:00:00Z --deep",
     "check:commits": "node tools/check-commit-size.js",
-    "setup:hooks": "git config core.hooksPath .githooks"
+    "setup:hooks": "git config core.hooksPath .githooks",
+    "e2e": "tsx --env-file-if-exists=.env scripts/e2e-settle.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
