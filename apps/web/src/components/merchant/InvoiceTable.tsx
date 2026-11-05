@@ -1,0 +1,45 @@
+import type { Hex, InvoiceSummary } from '../../lib/api/types';
+import { formatDay } from '../../lib/format';
+import { HEALTH_MESSAGES } from '../../lib/messages';
+import { AddressChip } from '../invoice/AddressChip';
+import { AmountUsdt } from '../invoice/AmountUsdt';
+import { StatusBadge } from '../invoice/StatusBadge';
+
+export function InvoiceTable({ rows, selected, onOpen }: { rows: InvoiceSummary[]; selected?: Hex; onOpen: (hash: Hex) => void }) {
+  return (
+    <div className="card card--flush">
+      <table className="table">
+        <caption className="sr-only">Your invoices. Select a client name to see details.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Client</th>
+            <th scope="col" className="num">Amount</th>
+            <th scope="col">Due</th>
+            <th scope="col">Status</th>
+            <th scope="col">Transaction</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.hash} aria-selected={selected === r.hash} onClick={() => onOpen(r.hash)}>
+              <td data-label="Client">
+                <button type="button" className="rowlink" onClick={(e) => { e.stopPropagation(); onOpen(r.hash); }}>{r.clientName}</button>
+              </td>
+              <td data-label="Amount" className="num"><AmountUsdt value={r.amount} size="sm" /></td>
+              <td data-label="Due">{formatDay(r.dueDate)}</td>
+              <td data-label="Status">
+                <span className="stack stack--sm" style={{ gap: 2 }}>
+                  <StatusBadge status={r.status} overlay={r.overlay} />
+                  {(r.status === 'AT_RISK' || r.status === 'FAILED') && r.healthReason && <span className="small muted">{HEALTH_MESSAGES[r.healthReason]}</span>}
+                </span>
+              </td>
+              <td data-label="Transaction" onClick={(e) => e.stopPropagation()}>
+                {r.txHash ? <AddressChip value={r.txHash} kind="tx" /> : <span className="muted small">None yet</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

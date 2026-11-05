@@ -109,3 +109,8 @@
 .stat-row .card { display: flex; flex-direction: column; gap: 6px; }
 .stat-row strong { font-size: 28px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 @media (max-width: 759px) { .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* invoice form line items */
+.line-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 128px 44px; gap: var(--s-2); align-items: start; }
+@media (max-width: 479px) { .line-row { grid-template-columns: 64px minmax(0, 1fr) 44px; } .line-row > .field:first-child { grid-column: 1 / -1; } }
+.inline-icon { display: inline-block; vertical-align: -2px; }

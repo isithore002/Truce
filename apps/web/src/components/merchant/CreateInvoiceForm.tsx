@@ -1,0 +1,183 @@
+import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { useApp } from '../../app/AppContext';
+import { api, ApiError } from '../../lib/api';
+import type { Address, CreateInvoiceResult, Invoice, InvoiceDetails } from '../../lib/api/types';
+import { ZERO_ADDRESS } from '../../lib/api/types';
+import { chain } from '../../lib/config';
+import { dateInputToUnix, formatUsdt, isAddress, parseQuantity, parseUsdt, unixToDateInput } from '../../lib/format';
+import { invoiceLib } from '../../lib/invoiceLib';
+import { loadSetup } from '../../lib/merchantSetup';
+import { errorMessage } from '../../lib/messages';
+import { signTypedData } from '../../lib/wallet';
+import { Icon } from '../Icon';
+
+interface Line { description: string; quantity: string; price: string }
+
+const DAY = 86_400;
+const defaultDue = () => unixToDateInput(Math.floor(Date.now() / 1000) + 30 * DAY);
+
+export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
+  const app = useApp();
+  const setup = loadSetup();
+  const [client, setClient] = useState('');
+  const [lines, setLines] = useState<Line[]>([{ description: '', quantity: '1', price: '' }]);
+  const [due, setDue] = useState(defaultDue);
+  const [grace, setGrace] = useState('3');
+  const [payer, setPayer] = useState('');
+  const [notes, setNotes] = useState('Net 30');
+  const [example, setExample] = useState(true);
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [result, setResult] = useState<CreateInvoiceResult>();
+  const [todaySec] = useState(() => Math.floor(Date.now() / 1000));
+
+  const parsed = lines.map((l) => ({ q: parseQuantity(l.quantity), p: parseUsdt(l.price), d: l.description.trim() }));
+  const total = parsed.reduce((acc, l) => (l.q.ok && l.p.ok ? acc + l.q.value * l.p.value : acc), 0n);
+  const dueUnix = dateInputToUnix(due);
+  const graceN = /^\d+$/.test(grace) ? Number(grace) : NaN;
+  const errors = {
+    client: client.trim() ? undefined : 'Enter the client name',
+    lines: parsed.some((l) => !l.d || !l.q.ok || !l.p.ok) ? 'Every line needs a description, a whole quantity and a price' : total === 0n ? 'The total must be above 0' : undefined,
+    due: !dueUnix ? 'Pick a due date' : Number(dueUnix) < todaySec - DAY ? 'The due date is in the past' : undefined,
+    grace: Number.isNaN(graceN) || graceN < 0 || graceN > 90 ? 'Grace is 0 to 90 days' : undefined,
+    payer: payer.trim() && !isAddress(payer.trim()) ? 'Enter a wallet address or leave empty' : undefined,
+    setup: !setup.domain || !isAddress(setup.payout) ? 'Finish setup first: domain and payout wallet' : undefined,
+  };
+  const valid = Object.values(errors).every((e) => !e);
+  const updateLine = (i: number, k: keyof Line, v: string) => setLines(lines.map((l, j) => (j === i ? { ...l, [k]: v } : l)));
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setTouched(true);
+    setError(undefined);
+    if (!valid) return;
+    setBusy(true);
+    try {
+      const merchant = app.wallet.address ?? (await app.connect('merchant'));
+      if (!merchant) throw new Error(app.wallet.error ?? 'Connect your signing wallet first.');
+      if (!(await app.switchChain())) throw new Error('Switch your wallet to Whitechain Sepolia (chain 1874).');
+      const cfg = app.publicConfig;
+      if (!cfg) throw new Error('Server settings are not loaded yet. Try again in a moment.');
+      const details: InvoiceDetails = {
+        merchantName: setup.name, clientName: client.trim(),
+        lineItems: parsed.map((l) => ({ description: l.d, quantity: (l.q as { value: bigint }).value.toString(), unitPrice: (l.p as { value: bigint }).value.toString() })),
+        ...(notes.trim() ? { notes: notes.trim() } : {}), example,
+      };
+      const invoice: Invoice = {
+        invoiceId: invoiceLib.newInvoiceId(), merchant, payout: setup.payout as Address, token: cfg.token, amount: total.toString(),
+        dueDate: dueUnix!, expiry: String(Number(dueUnix) + graceN * DAY), payer: (payer.trim() || ZERO_ADDRESS) as Address,
+        domainHash: invoiceLib.domainHash(setup.domain), memoHash: invoiceLib.memoHash(details),
+      };
+      const signature = await signTypedData(merchant, invoiceLib.invoiceTypedData(invoice, { chainId: cfg.chainId ?? chain.id, settler: cfg.settler }));
+      const res = await api.createInvoice({ version: 1, invoice, signature, domain: setup.domain, details });
+      setResult(res);
+      onCreated();
+    } catch (err) {
+      setError(err instanceof ApiError ? errorMessage(err.code, err.message) : (err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (result) {
+    return (
+      <section className="card stack" aria-live="polite">
+        <span className="badge badge--ok" style={{ alignSelf: 'flex-start' }}><Icon name="check" />Invoice created</span>
+        <h2>Send this payment link</h2>
+        <div className="row" style={{ flexWrap: 'nowrap' }}>
+          <input className="input input--mono grow" readOnly value={result.link} aria-label="Payment link" onFocus={(e) => e.target.select()} />
+          <button type="button" className="btn btn--primary" style={{ height: 48 }} onClick={() => void navigator.clipboard?.writeText(result.link).then(() => app.toast('Link copied'))}>
+            <Icon name="copy" size={18} />Copy link
+          </button>
+        </div>
+        <div className="btn-row">
+          <Link className="btn btn--secondary" to={`/pay/${result.hash}`}>Open the payment page</Link>
+          <button type="button" className="btn btn--secondary" onClick={() => { setResult(undefined); setTouched(false); setClient(''); setLines([{ description: '', quantity: '1', price: '' }]); }}>Create another invoice</button>
+        </div>
+      </section>
+    );
+  }
+
+  const err = (k: keyof typeof errors) => (touched ? errors[k] : undefined);
+  return (
+    <form className="card stack stack--lg" onSubmit={submit} noValidate aria-labelledby="create-title">
+      <div className="row row--between">
+        <h2 id="create-title">New invoice</h2>
+        <span className="small muted">From {setup.name || 'your business'} · <span className="mono">{setup.domain || 'no domain'}</span> · <Link className="link" to="/setup">Edit setup</Link></span>
+      </div>
+      {err('setup') && <div className="notice notice--warn" role="alert"><Icon name="alert" /><p>{errors.setup} <Link className="link" to="/setup">Open setup</Link></p></div>}
+
+      <div className="field">
+        <label htmlFor="ci-client">Client name</label>
+        <input id="ci-client" className="input" value={client} onChange={(e) => setClient(e.target.value)} aria-invalid={!!err('client')} placeholder="Beta Labs" />
+        {err('client') && <span className="field-error">{err('client')}</span>}
+      </div>
+
+      <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend className="label" style={{ marginBottom: 8 }}>Line items</legend>
+        {lines.map((l, i) => (
+          <div key={i} className="line-row">
+            <div className="field">
+              <label htmlFor={`li-d-${i}`} className="sr-only">Description, line {i + 1}</label>
+              <input id={`li-d-${i}`} className="input" value={l.description} onChange={(e) => updateLine(i, 'description', e.target.value)} placeholder="Brand identity" />
+            </div>
+            <div className="field">
+              <label htmlFor={`li-q-${i}`} className="sr-only">Quantity, line {i + 1}</label>
+              <input id={`li-q-${i}`} className="input" inputMode="numeric" value={l.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor={`li-p-${i}`} className="sr-only">Unit price in USDT, line {i + 1}</label>
+              <input id={`li-p-${i}`} className="input" inputMode="decimal" value={l.price} onChange={(e) => updateLine(i, 'price', e.target.value)} placeholder="1250.00" />
+            </div>
+            <button type="button" className="icon-btn" style={{ width: 44, height: 48 }} aria-label={`Remove line ${i + 1}`} disabled={lines.length === 1} onClick={() => setLines(lines.filter((_, j) => j !== i))}>
+              <Icon name="trash" />
+            </button>
+          </div>
+        ))}
+        <div className="row row--between">
+          <button type="button" className="link" onClick={() => setLines([...lines, { description: '', quantity: '1', price: '' }])}><Icon name="plus" size={14} className="inline-icon" /> Add a line</button>
+          <p aria-live="polite"><span className="muted small">Total </span><strong style={{ fontSize: 'var(--t-card)', fontWeight: 500 }}>{formatUsdt(total)} USDT</strong></p>
+        </div>
+        {err('lines') && <span className="field-error">{err('lines')}</span>}
+      </fieldset>
+
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor="ci-due">Due date (UTC)</label>
+          <input id="ci-due" type="date" className="input" value={due} onChange={(e) => setDue(e.target.value)} aria-invalid={!!err('due')} />
+          {err('due') && <span className="field-error">{err('due')}</span>}
+        </div>
+        <div className="field">
+          <label htmlFor="ci-grace">Payable for (days after due)</label>
+          <input id="ci-grace" className="input" inputMode="numeric" value={grace} onChange={(e) => setGrace(e.target.value)} aria-invalid={!!err('grace')} aria-describedby="ci-grace-h" />
+          {err('grace') ? <span className="field-error">{err('grace')}</span> : <span id="ci-grace-h" className="hint">After this the invoice expires and cannot be paid.</span>}
+        </div>
+        <div className="field span-2">
+          <label htmlFor="ci-payer">Only this wallet may pay (optional)</label>
+          <input id="ci-payer" className="input input--mono" value={payer} onChange={(e) => setPayer(e.target.value)} placeholder="0x… (leave empty for any wallet)" aria-invalid={!!err('payer')} spellCheck={false} />
+          {err('payer') && <span className="field-error">{err('payer')}</span>}
+        </div>
+        <div className="field span-2">
+          <label htmlFor="ci-notes">Notes</label>
+          <textarea id="ci-notes" className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </div>
+      <label className="check-row">
+        <input type="checkbox" checked={example} onChange={(e) => setExample(e.target.checked)} />
+        <span>Mark as EXAMPLE DATA (shows a banner to the buyer). Leave on for demos.</span>
+      </label>
+
+      {error && <div className="notice notice--bad" role="alert"><Icon name="alert" /><p>{error}</p></div>}
+      <div className="btn-row">
+        <button type="submit" className="btn btn--primary" disabled={busy || !invoiceLib.available} aria-describedby="ci-sign-h">
+          {busy ? 'Waiting for your wallet…' : `Sign and create invoice${total > 0n ? ` for ${formatUsdt(total)} USDT` : ''}`}
+        </button>
+      </div>
+      <p id="ci-sign-h" className="small muted">
+        {invoiceLib.available ? 'Your wallet signs the invoice. Nothing is sent on chain and no gas is used.' : 'Signing needs @truce/invoice-lib, which is not published yet. Mock mode works today.'}
+      </p>
+    </form>
+  );
+}
