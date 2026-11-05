@@ -83,6 +83,40 @@ contract InvoiceSettler is EIP712, Ownable, Pausable, ReentrancyGuard {
         return _hashTypedDataV4(keccak256(abi.encode(INVOICE_TYPEHASH, inv)));
     }
 
+    /// @notice Settle `inv` from the buyer's authorization. Anyone may submit (a relayer, or the buyer).
+    /// @dev Checks, then effects (record the payment), then interactions. Pays only `inv.payout`.
+    function settle(Invoice calldata inv, bytes calldata merchantSig, Auth calldata a)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        if (block.timestamp > inv.expiry) revert InvoiceExpired();
+        if (!tokenAllowed[inv.token]) revert TokenNotAllowed();
+        if (inv.amount == 0 || inv.amount > type(uint128).max || inv.payout == address(0)) revert InvalidInvoice();
+        if (inv.payer != address(0) && inv.payer != a.from) revert WrongPayer();
+
+        bytes32 hash = hashInvoice(inv);
+        Payment storage p = _payments[hash];
+        if (p.paidAt != 0) revert AlreadyPaid();
+        if (!SignatureChecker.isValidSignatureNow(inv.merchant, hash, merchantSig)) revert BadMerchantSignature();
+
+        p.payer = a.from;
+        p.paidAt = uint64(block.timestamp);
+        p.payout = inv.payout;
+        p.amount = uint128(inv.amount);
+
+        IERC20 token = IERC20(inv.token);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        IERC3009(inv.token)
+            .receiveWithAuthorization(
+                a.from, address(this), inv.amount, a.validAfter, a.validBefore, hash, a.v, a.r, a.s
+            );
+        if (token.balanceOf(address(this)) != balanceBefore + inv.amount) revert UnexpectedBalanceChange();
+
+        token.safeTransfer(inv.payout, inv.amount);
+        emit InvoicePaid(hash, inv.merchant, a.from, inv.payout, inv.amount);
+    }
+
     function payments(bytes32 hash)
         external
         view
