@@ -11,11 +11,11 @@ export const domainFile = {
   chainIds: [1874],
 };
 
-export function setup(opts: { latencyMs?: number } = {}) {
+export function setup(opts: { latencyMs?: number; authorizeWaitMs?: number } = {}) {
   let t = Number(T0);
   const chain = new MockChain({ settler: SETTLER, now: () => BigInt(t), latencyMs: opts.latencyMs });
   const store = new JsonStore(undefined, () => t);
-  const app = buildApp({ chain, store, resolveDomain: async (d) => (d === DOMAIN ? domainFile : null), now: () => t, exampleMode: true });
+  const app = buildApp({ chain, store, resolveDomain: async (d) => (d === DOMAIN ? domainFile : null), now: () => t, exampleMode: true, authorizeWaitMs: opts.authorizeWaitMs });
   return { app, chain, store, set: (v: number) => (t = v), advance: (s: number) => (t += s) };
 }
 

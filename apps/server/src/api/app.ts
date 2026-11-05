@@ -16,12 +16,14 @@ export interface AppDeps {
   publicBaseUrl?: string;
   /** Origin allowed to call the API from a browser. */
   webOrigin?: string;
+  /** How long /authorize waits for confirmation before answering 202 PENDING. */
+  authorizeWaitMs?: number;
   /** True when fictional *.example merchant domains are served from local fixtures. */
   exampleMode?: boolean;
   logger?: boolean;
 }
 
-export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode">> {}
+export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs">> {}
 
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 64 * 1024, trustProxy: false });
@@ -32,6 +34,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     now: deps.now ?? (() => Math.floor(Date.now() / 1000)),
     publicBaseUrl: (deps.publicBaseUrl ?? "http://localhost:5173").replace(/\/$/, ""),
     exampleMode: deps.exampleMode ?? false,
+    authorizeWaitMs: deps.authorizeWaitMs ?? 15_000,
   };
   const origin = deps.webOrigin ?? "http://localhost:5173";
 

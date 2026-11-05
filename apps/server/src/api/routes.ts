@@ -2,35 +2,12 @@ import type { FastifyInstance } from "fastify";
 import type { Address, Hex } from "viem";
 import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc } from "@truce/invoice-lib";
 import { RateLimiter } from "../chain/limits.js";
-import type { InvoiceRecord, InvoiceStatus } from "../shared/store.js";
 import type { AppContext } from "./app.js";
 import { ApiError } from "./errors.js";
-import { AddressParam, HashParam, VerifyQuery } from "./schemas.js";
-
-/** An unpaid invoice past its expiry reads as EXPIRED (computed on read, nothing is rewritten). */
-export function effectiveStatus(rec: InvoiceRecord, now: number): InvoiceStatus {
-  const expired = BigInt(rec.doc.invoice.expiry) < BigInt(now);
-  return expired && (rec.status === "ISSUED" || rec.status === "SCHEDULED_OK" || rec.status === "AT_RISK" || rec.status === "FAILED") ? "EXPIRED" : rec.status;
-}
-
-export function summarize(rec: InvoiceRecord, now: number) {
-  const inv = rec.doc.invoice;
-  return {
-    hash: rec.hash,
-    invoiceId: inv.invoiceId,
-    merchantName: rec.doc.details.merchantName,
-    clientName: rec.doc.details.clientName,
-    amount: inv.amount,
-    token: inv.token,
-    dueDate: inv.dueDate,
-    expiry: inv.expiry,
-    status: effectiveStatus(rec, now),
-    txHash: rec.payment?.txHash,
-    paidAt: rec.payment?.paidAt,
-    createdAt: rec.createdAt,
-    example: rec.doc.details.example,
-  };
-}
+import { ChainError } from "../chain/errors.js";
+import { invoicesToCsv } from "./csv.js";
+import { AddressParam, AuthorizeBody, HashParam, VerifyQuery } from "./schemas.js";
+import { effectiveStatus, summarize } from "./status.js";
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
   const { chain, store } = ctx;
@@ -137,6 +114,97 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     const { address } = AddressParam.parse(req.params);
     const items = (await store.listByMerchant(address)).map((r) => summarize(r, ctx.now()));
     return { items };
+  });
+
+  app.get("/api/merchants/:address/export.csv", async (req, reply) => {
+    const { address } = AddressParam.parse(req.params);
+    const csv = invoicesToCsv(await store.listByMerchant(address), { now: ctx.now(), explorerBase: chain.config.explorerBase });
+    return reply
+      .header("content-type", "text/csv; charset=utf-8")
+      .header("content-disposition", `attachment; filename="truce-invoices-${address.slice(2, 10).toLowerCase()}.csv"`)
+      .send(csv);
+  });
+
+  // ---- pay now: the buyer signed once; the relayer submits and pays the gas ----
+  const settling = new Set<string>();
+
+  app.post("/api/invoices/:hash/authorize", async (req, reply) => {
+    const { hash } = HashParam.parse(req.params);
+    const body = AuthorizeBody.parse(req.body);
+    const rec = await store.get(hash);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    if (body.mode === "due") {
+      throw new ApiError("NOT_IMPLEMENTED", "Paying on the due date is not available yet. Please pay now instead.");
+    }
+    const status = effectiveStatus(rec, ctx.now());
+    if (status === "PAID") throw new ApiError("ALREADY_PAID", "This invoice has already been paid.");
+    if (status === "EXPIRED") throw new ApiError("EXPIRED", "This invoice has expired and can no longer be paid.", undefined, 410);
+    if (settling.has(hash)) throw new ApiError("DUPLICATE", "A payment for this invoice is already in progress.");
+
+    const parsed = parseInvoiceDoc(rec.doc);
+    if (!parsed.ok) throw new ApiError("INTERNAL", "The stored invoice is damaged.");
+    const auth = { mode: body.mode, from: body.from, validAfter: BigInt(body.validAfter), validBefore: BigInt(body.validBefore), v: body.v, r: body.r as Hex, s: body.s as Hex };
+
+    settling.add(hash);
+    await store.update(hash, (r) => {
+      r.auth = { ...body, r: body.r as Hex, s: body.s as Hex };
+      r.events.push({ at: ctx.now(), type: "authorized", detail: body.from });
+    });
+
+    type Outcome = { status: "PAID" | "PENDING"; txHash?: Hex };
+    const work: Promise<Outcome> = (async () => {
+      try {
+        const { txHash } = await chain.settle(parsed.value, auth, { clientKey: req.ip });
+        await store.update(hash, (r) => {
+          r.status = "PAID";
+          r.payment = { payer: auth.from, paidAt: ctx.now(), txHash };
+          r.events.push({ at: ctx.now(), type: "paid", txHash });
+        });
+        return { status: "PAID", txHash };
+      } catch (e) {
+        if (e instanceof ChainError && e.code === "PENDING") {
+          const txHash = e.details?.txHash as Hex | undefined;
+          await store.update(hash, (r) => {
+            r.events.push({ at: ctx.now(), type: "pending", txHash });
+          });
+          return { status: "PENDING", txHash };
+        }
+        const code = e instanceof ChainError ? e.code : "INTERNAL";
+        await store.update(hash, (r) => {
+          r.events.push({ at: ctx.now(), type: "settle_failed", detail: code });
+        });
+        throw e;
+      } finally {
+        settling.delete(hash);
+      }
+    })();
+    work.catch(() => {}); // if we already answered 202, a late failure is only recorded, not re-thrown
+
+    let timer: NodeJS.Timeout | undefined;
+    const waited = await Promise.race([
+      work,
+      new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), ctx.authorizeWaitMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
+
+    if (waited === "timeout") return reply.status(202).send({ status: "PENDING" });
+    return reply.status(waited.status === "PAID" ? 200 : 202).send(waited);
+  });
+
+  app.get("/healthz", async (_req, reply) => {
+    try {
+      const st = await chain.status();
+      return {
+        ok: true,
+        mode: st.mode,
+        rpc: { chainId: st.chainId, blockNumber: st.blockNumber?.toString(), lagSeconds: st.lagSeconds },
+        relayer: st.relayer ? { address: st.relayer.address, wbtBalance: st.relayer.wbtBalance.toString() } : undefined,
+        store: { invoices: await store.count() },
+      };
+    } catch {
+      return reply.status(503).send({ ok: false, error: "The chain RPC is not reachable.", store: { invoices: await store.count() } });
+    }
   });
 }
 
