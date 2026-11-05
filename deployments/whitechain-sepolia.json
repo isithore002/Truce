@@ -1,0 +1,15 @@
+{
+  "chainId": 1874,
+  "network": "Whitechain Sepolia",
+  "contract": "InvoiceSettler",
+  "address": "0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7",
+  "txHash": "0xc0550addd7db6a5d9cbe3670ad75513fca54271c4a311e52fb54d589405f8e2b",
+  "blockNumber": 12317840,
+  "deployer": "0xed0081BB40b7Bf64D407Ec25a99475d0BB8ed903",
+  "owner": "0xed0081BB40b7Bf64D407Ec25a99475d0BB8ed903",
+  "allowedTokens": ["0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7"],
+  "compiler": "solc 0.8.30, evm prague, optimizer 200 runs",
+  "deployedAt": "2026-11-06",
+  "verified": true,
+  "explorer": "https://explorer.testnet.whitechain.io/address/0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7"
+}
