@@ -112,7 +112,7 @@ export function VerifyPage() {
             ) : (
               <>
                 <OnchainStatus record={v.record} stored={target.kind === 'hash'} />
-                <InvoiceCard doc={v.doc} />
+                <InvoiceCard doc={v.doc} payoutBad={v.verify?.checks.some((c) => c.id === 'payout_in_domain_file' && !c.ok)} signerBad={v.verify?.checks.some((c) => c.id === 'merchant_matches_domain_file' && !c.ok)} />
                 {target.kind === 'hash' && v.verify?.result === 'PASS' && (
                   <Link className="btn btn--primary btn--block" to={`/pay/${target.hash}`}>Open the payment page<Icon name="arrow" className="arrow" /></Link>
                 )}

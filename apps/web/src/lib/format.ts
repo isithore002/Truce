@@ -84,7 +84,9 @@ export function formatDay(sec: string | number | bigint): string {
 
 /** Local time with the zone name, for "your time" lines */
 export function formatDateLocal(sec: string | number | bigint, locale?: string): string {
-  return toDate(sec).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short', timeZoneName: 'short' });
+  return toDate(sec).toLocaleString(locale, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+  });
 }
 
 export function formatIso(iso: string): string {

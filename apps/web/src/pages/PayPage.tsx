@@ -156,7 +156,7 @@ export function PayPage() {
       <VerdictBanner verify={v.verify} domain={doc?.domain} loading={v.loading} />
       <div className="split">
         <div className="stack stack--lg">
-          {doc ? <InvoiceCard doc={doc} status={record?.status} overlay={record?.overlay} /> : <div className="card skeleton" style={{ height: 480 }} aria-hidden="true" />}
+          {doc ? <InvoiceCard doc={doc} status={record?.status} overlay={record?.overlay} payoutBad={v.verify?.checks.some((c) => c.id === 'payout_in_domain_file' && !c.ok)} signerBad={v.verify?.checks.some((c) => c.id === 'merchant_matches_domain_file' && !c.ok)} /> : <div className="card skeleton" style={{ height: 480 }} aria-hidden="true" />}
           <VerificationChecklist checks={v.verify?.checks} domain={doc?.domain ?? 'the domain'} loading={v.loading} />
         </div>
         <div className="stack stack--lg sticky-col">

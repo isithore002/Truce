@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { AppProvider } from './app/AppContext';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { LandingPage } from './pages/landing/LandingPage';
 import { MerchantPage } from './pages/MerchantPage';
@@ -12,6 +13,7 @@ export function App() {
   return (
     <AppProvider>
       <AppShell>
+        <ErrorBoundary>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/verify" element={<VerifyPage />} />
@@ -21,6 +23,7 @@ export function App() {
           <Route path="/merchant" element={<MerchantPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </ErrorBoundary>
       </AppShell>
     </AppProvider>
   );

@@ -9,7 +9,7 @@ import { LineItems } from './LineItems';
 import { StatusBadge } from './StatusBadge';
 
 /** The invoice as the buyer sees it. The payout wallet and the domain sit next to the amount. */
-export function InvoiceCard({ doc, status, overlay }: { doc: InvoiceDoc; status?: Status; overlay?: Overlay }) {
+export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { doc: InvoiceDoc; status?: Status; overlay?: Overlay; payoutBad?: boolean; signerBad?: boolean }) {
   const { invoice: inv, details } = doc;
   const locked = !sameAddress(inv.payer, ZERO_ADDRESS);
   return (
@@ -40,11 +40,11 @@ export function InvoiceCard({ doc, status, overlay }: { doc: InvoiceDoc; status?
           </div>
           <dl className="kv">
             <dt>Pays to</dt>
-            <dd><AddressChip value={inv.payout} /></dd>
+            <dd className={payoutBad ? 'kv-bad' : undefined}><AddressChip value={inv.payout} />{payoutBad && <span className="field-error">Not listed on {doc.domain}</span>}</dd>
             <dt>Domain</dt>
             <dd className="mono small">{doc.domain}</dd>
             <dt>Signed by</dt>
-            <dd><AddressChip value={inv.merchant} /></dd>
+            <dd className={signerBad ? 'kv-bad' : undefined}><AddressChip value={inv.merchant} />{signerBad && <span className="field-error">Not the signer listed on {doc.domain}</span>}</dd>
           </dl>
         </div>
 

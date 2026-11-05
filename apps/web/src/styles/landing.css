@@ -57,7 +57,7 @@
 .l-card h3 { font-size: var(--t-card); margin-top: 8px; }
 .l-card p { font-size: 16px; color: var(--p-ink); }
 .l-card__visual { flex: 1; min-height: 260px; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--p-bg); border-radius: var(--r-md); overflow: hidden; }
-.l-card__visual > .frag { width: 100%; max-width: 340px; box-shadow: 0 10px 28px -14px rgba(51, 50, 49, .25); }
+.l-card__visual > .frag { min-width: 0; width: 100%; max-width: 340px; box-shadow: 0 10px 28px -14px rgba(51, 50, 49, .25); }
 .l-card--text { min-height: 280px; justify-content: flex-end; }
 .l-card--text > svg { color: var(--p-accent); margin-bottom: auto; }
 
@@ -120,10 +120,13 @@
 @media (max-width: 639px) {
   .hero-tri__text h1 { font-size: 40px; }
   .hero-tri__grid { padding-top: 24px; }
-  .collage { height: 470px; margin-bottom: 24px; }
-  .collage__piece { width: 88% !important; }
-  .collage__piece:nth-child(odd) { left: 0 !important; }
-  .collage__piece:nth-child(even) { left: 12% !important; }
+  .collage { height: auto; display: grid; margin-bottom: 24px; }
+  .collage__set { position: relative; grid-area: 1 / 1; display: flex; flex-direction: column; gap: 12px; }
+  .collage__piece { position: relative; left: auto !important; top: auto !important; width: 100% !important; }
+  .collage__piece:nth-child(n + 4) { display: none; }
+  .collage__piece:nth-child(2) { width: 92% !important; margin-left: 8%; }
+  .l-card__visual { padding: 12px; min-height: 0; }
+  .frag .checklist__state { display: none; }
   .hero-tri__action { align-items: stretch; margin-top: 16px; }
   .hero-tri__btn { height: 56px; width: 100%; }
   .l-cards--4 { grid-template-columns: 1fr; }

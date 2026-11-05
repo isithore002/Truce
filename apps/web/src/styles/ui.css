@@ -10,10 +10,10 @@
 .nav__links a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .2s var(--ease); }
 .nav__links a:hover::after, .nav__links a[aria-current="page"]::after { transform: scaleX(1); }
 .nav__end { margin-left: auto; display: flex; align-items: center; gap: var(--s-3); }
-.nav__menu { display: none; }
+.nav__end .nav__menu { display: none; }
 @media (max-width: 899px) {
   .nav__links { display: none; }
-  .nav__menu { display: inline-flex; }
+  .nav__end .nav__menu { display: inline-grid; }
   .nav__links.is-open {
     display: flex; flex-direction: column; gap: 0; position: fixed; inset: var(--nav) 0 0; margin: 0;
     background: var(--p-bg); padding: var(--s-4) var(--gut); z-index: 20;
@@ -25,7 +25,7 @@
 /* page frame */
 .page { padding-top: var(--nav); min-height: 100vh; display: flex; flex-direction: column; }
 .page > main { flex: 1 0 auto; }
-.app-main { padding: var(--s-7) 0 var(--s-8); }
+.app-main { padding-top: var(--s-7); padding-bottom: var(--s-8); }
 .page-head { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-6); }
 .page-head h1 { font-size: clamp(32px, 1.2vw + 24px, 44px); }
 

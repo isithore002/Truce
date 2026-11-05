@@ -114,3 +114,6 @@
 .line-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 128px 44px; gap: var(--s-2); align-items: start; }
 @media (max-width: 479px) { .line-row { grid-template-columns: 64px minmax(0, 1fr) 44px; } .line-row > .field:first-child { grid-column: 1 / -1; } }
 .inline-icon { display: inline-block; vertical-align: -2px; }
+
+.kv-bad { display: flex; flex-direction: column; gap: 2px; }
+.kv-bad code { background: var(--bad-bg); color: var(--bad); font-weight: 500; }
