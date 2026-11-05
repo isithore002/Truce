@@ -14,5 +14,8 @@
     "radar": "node tools/competitor-radar.js --pages 6 --since 2026-11-03T00:00:00Z --deep",
     "check:commits": "node tools/check-commit-size.js",
     "setup:hooks": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }
