@@ -35,6 +35,19 @@ describe("mapChainError", () => {
     expect(mapChainError(err("something unexpected")).code).toBe("SIMULATION_FAILED");
   });
 
+  it("maps the exact revert strings of the live track USDT (observed on chain 1874)", () => {
+    const err = (reason: string) => reverted([{ type: "error", name: "Error", inputs: [{ name: "message", type: "string" }] }], "Error", [reason]);
+    for (const reason of [
+      "TetherToken: to != msg.sender",
+      "TetherToken: auth early",
+      "TetherToken: auth expired",
+      "TetherToken: auth invalid",
+      "TetherToken: invalid signature",
+    ]) {
+      expect(mapChainError(err(reason)).code, reason).toBe("AUTH_INVALID");
+    }
+  });
+
   it("never blames the buyer for infrastructure errors (e.g. the relayer is out of gas money)", () => {
     const e = mapChainError(new BaseError("The total cost (gas * gas fee + value) exceeds the balance of the account."));
     expect(e.code).toBe("INTERNAL");

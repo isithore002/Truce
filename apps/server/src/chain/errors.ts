@@ -42,11 +42,15 @@ const CONTRACT_ERRORS: Record<string, [ChainErrorCode, string]> = {
   ERC20InsufficientBalance: ["INSUFFICIENT_BALANCE", "The buyer's balance is too low to pay this invoice."],
 };
 
-/** Token revert strings (the track USDT, and common EIP-3009 implementations) to API codes. */
+/**
+ * Token revert strings to API codes. The track USDT (verified by simulation on 1874) reverts with
+ * "TetherToken: to != msg.sender", "auth early", "auth expired", "auth invalid" (nonce used or cancelled)
+ * and "invalid signature". Other EIP-3009 wording is matched too.
+ */
 function fromReason(reason: string): [ChainErrorCode, string] {
   const r = reason.toLowerCase();
   if (/balance|insufficient/.test(r)) return ["INSUFFICIENT_BALANCE", "The buyer's balance is too low to pay this invoice."];
-  if (/authorization.*(used|expired|not yet valid)|invalid signature|nonce|caller must be the payee/.test(r)) {
+  if (/auth(orization)?[: ]+(early|expired|invalid|is used|is expired|is not yet valid)|authorization.*(used|expired|not yet valid)|invalid signature|nonce|to != msg\.sender|caller must be the payee/.test(r)) {
     return ["AUTH_INVALID", "The buyer's payment authorization is not valid right now (expired, not yet valid, already used or wrongly signed)."];
   }
   return ["SIMULATION_FAILED", "The payment would fail on chain, so nothing was sent."];
