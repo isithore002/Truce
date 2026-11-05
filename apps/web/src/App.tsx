@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { AppProvider } from './app/AppContext';
 import { AppShell } from './components/layout/AppShell';
+import { LandingPage } from './pages/landing/LandingPage';
 import { MerchantPage } from './pages/MerchantPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { SetupPage } from './pages/SetupPage';
@@ -12,6 +13,7 @@ export function App() {
     <AppProvider>
       <AppShell>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/verify" element={<VerifyPage />} />
           <Route path="/pay" element={<PayPage />} />
           <Route path="/pay/:hash" element={<PayPage />} />
