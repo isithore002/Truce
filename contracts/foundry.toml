@@ -1,0 +1,19 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.28"
+evm_version = "prague"
+optimizer = true
+optimizer_runs = 200
+
+# Foundry tests read the shared golden vectors (see docs/INTERFACES.md section 9)
+fs_permissions = [{ access = "read", path = "../packages/invoice-lib/test-vectors" }]
+
+[rpc_endpoints]
+whitechain_testnet = "https://rpc.testnet.whitechain.io"
+
+# Deploy and verify (Blockscout), after `forge build`:
+#   forge create src/InvoiceSettler.sol:InvoiceSettler --rpc-url whitechain_testnet --private-key $DEPLOYER_PK --broadcast \
+#     --verify --verifier blockscout --verifier-url https://explorer.testnet.whitechain.io/api/ --constructor-args ...
+# Use a THROWAWAY key only. Testnet only (chain id 1874).
