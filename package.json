@@ -1,0 +1,18 @@
+{
+  "name": "truce",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Invoices a buyer can verify before paying, collected on the due date, paid gaslessly in USDT on Whitechain Sepolia",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "sdk",
+    "examples/*"
+  ],
+  "scripts": {
+    "gate": "npm --prefix gate run gate",
+    "radar": "node tools/competitor-radar.js --pages 6 --since 2026-11-03T00:00:00Z --deep",
+    "check:commits": "node tools/check-commit-size.js",
+    "setup:hooks": "git config core.hooksPath .githooks"
+  }
+}
