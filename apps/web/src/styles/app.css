@@ -1,6 +1,6 @@
 /* Product pages: invoice, verify, pay, merchant. */
 
-.inv-amount { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-5) var(--s-7); align-items: start; padding: var(--s-5); background: var(--p-bg); border-radius: var(--r-md); }
+.inv-amount { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); align-items: start; padding: var(--s-5); background: var(--p-bg); border-radius: var(--r-md); }
 @media (max-width: 639px) { .inv-amount { grid-template-columns: 1fr; padding: var(--s-4); } }
 
 /* line items table */

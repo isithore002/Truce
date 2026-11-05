@@ -17,7 +17,7 @@ import { chain, config } from '../lib/config';
 import { decodeDoc } from '../lib/doclink';
 import { isHash } from '../lib/format';
 import { invoiceLib } from '../lib/invoiceLib';
-import { errorMessage, HEALTH_MESSAGES, SNAPSHOT_NOTE } from '../lib/messages';
+import { errorMessage, HEALTH_MESSAGES } from '../lib/messages';
 import { payGate } from '../lib/payGate';
 import { comparePin, savePin } from '../lib/pins';
 import { signTypedData, splitSignature } from '../lib/wallet';
@@ -167,10 +167,10 @@ export function PayPage() {
               {doc && pin && v.verify?.result === 'PASS' && !scheduled && record?.status !== 'PAID' && (
                 <PinWarning pin={pin} domain={doc.domain} confirmed={pinConfirmed} onConfirm={setPinConfirmed} />
               )}
-              <PayPanel
+              {!scheduled && <PayPanel
                 gate={gate} amount={doc?.invoice.amount ?? '0'} dueDate={doc?.invoice.dueDate ?? '0'} mode={mode} onMode={setMode}
                 dueDateFeature={config.features.dueDate} step={step} error={error} connected={!!app.wallet.address} onPay={pay}
-              />
+              />}
             </>
           )}
           {scheduled && record && (
@@ -183,7 +183,7 @@ export function PayPage() {
                 <div className="notice notice--bad" aria-live="polite"><Icon name="x" /><p><strong>Collection failed.</strong> {HEALTH_MESSAGES[record.health?.reason ?? 'LOW_BALANCE']} It retries automatically until the payment window closes.</p></div>
               )}
               {record.status === 'SCHEDULED_OK' && <p className="small">{HEALTH_MESSAGES.NONE}</p>}
-              <p className="small muted">{SNAPSHOT_NOTE}</p>
+              {error && <div className="notice notice--bad" role="alert"><Icon name="alert" /><p>{error}</p></div>}
               {config.features.dueDate && (
                 <button type="button" className="btn btn--secondary" onClick={cancelScheduled} disabled={cancelling}>
                   {cancelling ? 'Waiting for your wallet…' : 'Cancel scheduled payment'}
