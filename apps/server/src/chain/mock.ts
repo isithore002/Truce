@@ -10,7 +10,7 @@ import {
   type InvoiceDoc,
 } from "@truce/invoice-lib";
 import { ChainError } from "./errors.js";
-import type { CallMeta, ChainModule, ChainPublicConfig, HealthReason, OnchainStatus } from "./types.js";
+import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus } from "./types.js";
 
 export interface MockChainOptions {
   chainId?: number;
@@ -193,6 +193,16 @@ export class MockChain implements ChainModule {
   async onchainStatus(hash: Hex): Promise<OnchainStatus> {
     const p = this.payments.get(hash);
     return p ? { paid: true, refunded: 0n, payer: p.payer, txHash: p.txHash } : { paid: false, refunded: 0n };
+  }
+
+  async status(): Promise<ChainStatus> {
+    return {
+      mode: "mock",
+      chainId: this.config.chainId,
+      blockNumber: 0n,
+      lagSeconds: 0,
+      relayer: { address: "0x000000000000000000000000000000000000dEaD", wbtBalance: 1_000_000_000_000_000_000n },
+    };
   }
 
   startScheduler(): void {

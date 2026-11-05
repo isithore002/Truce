@@ -16,6 +16,16 @@ export interface CallMeta {
   clientKey?: string;
 }
 
+/** Snapshot for /healthz. */
+export interface ChainStatus {
+  mode: "mock" | "testnet";
+  chainId: number;
+  blockNumber?: bigint;
+  /** Seconds between the latest block and now. */
+  lagSeconds?: number;
+  relayer?: { address: Address; wbtBalance: bigint };
+}
+
 export interface OnchainStatus {
   paid: boolean;
   refunded: bigint;
@@ -33,6 +43,8 @@ export interface ChainModule {
   /** Relays the buyer's signed CancelAuthorization. */
   cancelAuthorization(from: Address, nonce: Hex, sig: { v: number; r: Hex; s: Hex }): Promise<{ txHash: Hex }>;
   onchainStatus(hash: Hex): Promise<OnchainStatus>;
+  /** RPC and relayer snapshot for /healthz. Throws if the chain cannot be reached. */
+  status(): Promise<ChainStatus>;
   /** Settles due-date authorizations and refreshes health. Not part of T11/T11b. */
   startScheduler(): void;
 }

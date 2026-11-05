@@ -36,6 +36,9 @@ function fakes(over: Partial<PublicApi> = {}) {
     getGasPrice: vi.fn(async () => 10_000_000_000n), // 10 gwei
     waitForTransactionReceipt: vi.fn(async () => ({ status: "success" as const, gasUsed: 150_000n, effectiveGasPrice: 10_000_000_000n })),
     getContractEvents: vi.fn(async () => []),
+    getBlockNumber: vi.fn(async () => 12_345n),
+    getBlock: vi.fn(async () => ({ timestamp: BigInt(Math.floor(Date.now() / 1000) - 3) })),
+    getBalance: vi.fn(async () => 5n * 10n ** 16n),
     ...over,
   };
   const wallet = { writeContract: vi.fn(async (_args: unknown) => TX) } satisfies WalletApi;
@@ -187,6 +190,17 @@ describe("ViemChain.onchainStatus", () => {
     const chain = new ViemChain({ ...cfg, deploymentBlock: 100n }, { publicClient: pub, walletClient: wallet, budget });
     expect(await chain.onchainStatus(TX)).toMatchObject({ paid: true, txHash: TX });
     expect(pub.getContractEvents).toHaveBeenCalledWith(expect.objectContaining({ fromBlock: 100n }));
+  });
+});
+
+describe("ViemChain.status", () => {
+  it("reports the chain, block lag and the relayer balance for /healthz", async () => {
+    const { chain } = make();
+    const st = await chain.status();
+    expect(st).toMatchObject({ mode: "testnet", chainId: 1874, blockNumber: 12_345n });
+    expect(st.lagSeconds).toBeGreaterThanOrEqual(3);
+    expect(st.relayer?.wbtBalance).toBe(5n * 10n ** 16n);
+    expect(st.relayer?.address).toMatch(/^0x[0-9a-fA-F]{40}$/);
   });
 });
 

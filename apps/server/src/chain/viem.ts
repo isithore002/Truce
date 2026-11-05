@@ -12,7 +12,7 @@ import type { BuyerAuth, InvoiceDoc } from "@truce/invoice-lib";
 import { settlerAbi, type ChainConfig } from "./config.js";
 import { ChainError, mapChainError } from "./errors.js";
 import { RateLimiter, RelayerBudget } from "./limits.js";
-import type { CallMeta, ChainModule, ChainPublicConfig, HealthReason, OnchainStatus } from "./types.js";
+import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus } from "./types.js";
 
 /** The slice of a viem public client this module uses (narrow, so tests can fake it). */
 export interface PublicApi {
@@ -23,6 +23,9 @@ export interface PublicApi {
   getGasPrice(): Promise<bigint>;
   waitForTransactionReceipt(args: any): Promise<{ status: "success" | "reverted"; gasUsed: bigint; effectiveGasPrice: bigint; l1Fee?: bigint }>;
   getContractEvents(args: any): Promise<{ transactionHash: Hex | null }[]>;
+  getBlockNumber(): Promise<bigint>;
+  getBlock(args: any): Promise<{ timestamp: bigint }>;
+  getBalance(args: any): Promise<bigint>;
 }
 
 export interface WalletApi {
@@ -148,6 +151,20 @@ export class ViemChain implements ChainModule {
       }
     }
     return { paid: true, refunded, payer, txHash };
+  }
+
+  async status(): Promise<ChainStatus> {
+    const chainId = await this.pub.getChainId();
+    const blockNumber = await this.pub.getBlockNumber();
+    const block = await this.pub.getBlock({ blockNumber });
+    const wbtBalance = await this.pub.getBalance({ address: this.account.address });
+    return {
+      mode: "testnet",
+      chainId,
+      blockNumber,
+      lagSeconds: Math.max(0, Math.floor(Date.now() / 1000) - Number(block.timestamp)),
+      relayer: { address: this.account.address, wbtBalance },
+    };
   }
 
   // Health checks, relayed cancel and the scheduler are T12 and T13 (SHOULD features).
