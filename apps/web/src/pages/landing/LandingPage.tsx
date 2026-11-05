@@ -2,6 +2,7 @@ import '../../styles/landing.css';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
+import { config } from '../../lib/config';
 import { FragChecks, FragFile, FragInvoice, FragPay, FragPin, FragReceipt, FragTimeline, FragVerdict } from './Fragments';
 
 /*
@@ -145,7 +146,7 @@ export function LandingPage() {
               <li><Icon name="x" /><span><strong>The app shows FAIL.</strong> The wallet is not on the merchant’s domain, so Pay stays off.</span></li>
               <li><Icon name="shield" /><span><strong>The contract reverts.</strong> InvoiceSettler pays only the payout wallet the merchant signed.</span></li>
             </ul>
-            <div className="btn-row"><Link className="btn btn--secondary" to="/demo">See the swapped-wallet demo</Link></div>
+            {config.demoTools && <div className="btn-row"><Link className="btn btn--secondary" to="/demo">See the swapped-wallet demo</Link></div>}
           </div>
           <Settler />
         </div>

@@ -20,7 +20,8 @@ export function parseConfig(env: Env): AppConfig {
   return {
     apiBase: String(env.VITE_API_BASE ?? 'http://localhost:8787').replace(/\/+$/, ''),
     apiMode: mode === 'server' ? 'server' : 'mock',
-    demoTools: on(env.VITE_DEMO_TOOLS),
+    // demo tools default on in mock mode, off in server mode
+    demoTools: env.VITE_DEMO_TOOLS === undefined || env.VITE_DEMO_TOOLS === '' ? mode !== 'server' : on(env.VITE_DEMO_TOOLS),
     exampleMode: on(env.VITE_EXAMPLE_MODE),
     features: { dueDate: on(env.VITE_FEATURE_DUE_DATE), soulBadge: on(env.VITE_FEATURE_SOUL_BADGE) },
   };

@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { AppProvider } from './app/AppContext';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
+import { DemoPage } from './pages/DemoPage';
 import { LandingPage } from './pages/landing/LandingPage';
 import { MerchantPage } from './pages/MerchantPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/pay/:hash" element={<PayPage />} />
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/merchant" element={<MerchantPage />} />
+          <Route path="/demo" element={<DemoPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </ErrorBoundary>
