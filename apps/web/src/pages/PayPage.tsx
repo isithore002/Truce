@@ -154,12 +154,12 @@ export function PayPage() {
   return (
     <div className="wrap app-main stack stack--lg">
       <VerdictBanner verify={v.verify} domain={doc?.domain} loading={v.loading} />
-      <div className="split">
-        <div className="stack stack--lg">
+      <div className="split pay-split">
+        <div className="stack stack--lg pay-main">
           {doc ? <InvoiceCard doc={doc} status={record?.status} overlay={record?.overlay} payoutBad={v.verify?.checks.some((c) => c.id === 'payout_in_domain_file' && !c.ok)} signerBad={v.verify?.checks.some((c) => c.id === 'merchant_matches_domain_file' && !c.ok)} /> : <div className="card skeleton" style={{ height: 480 }} aria-hidden="true" />}
           <VerificationChecklist checks={v.verify?.checks} domain={doc?.domain ?? 'the domain'} loading={v.loading} />
         </div>
-        <div className="stack stack--lg sticky-col">
+        <div className="stack stack--lg sticky-col pay-side">
           {showReceipt ? (
             <Receipt record={record!} explorerUrl={app.publicConfig?.explorerUrl} />
           ) : (

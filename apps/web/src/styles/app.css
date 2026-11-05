@@ -117,3 +117,11 @@
 
 .kv-bad { display: flex; flex-direction: column; gap: 2px; }
 .kv-bad code { background: var(--bad-bg); color: var(--bad); font-weight: 500; }
+
+/* /pay on narrow screens: invoice, then the pay column, then the checks */
+@media (max-width: 959px) {
+  .pay-split > .pay-main { display: contents; }
+  .pay-main > :first-child { order: 1; }
+  .pay-side { order: 2; }
+  .pay-main > :last-child { order: 3; }
+}
