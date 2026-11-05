@@ -1,0 +1,111 @@
+/* Product pages: invoice, verify, pay, merchant. */
+
+.inv-amount { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-5) var(--s-7); align-items: start; padding: var(--s-5); background: var(--p-bg); border-radius: var(--r-md); }
+@media (max-width: 639px) { .inv-amount { grid-template-columns: 1fr; padding: var(--s-4); } }
+
+/* line items table */
+.lines { width: 100%; border-collapse: collapse; font-size: var(--t-body); font-variant-numeric: tabular-nums; }
+.lines th, .lines td { text-align: left; padding: 10px 0; border-bottom: 1px solid var(--p-line); vertical-align: top; }
+.lines thead th { font-size: var(--t-label); font-weight: 500; color: var(--p-muted); }
+.lines .num { text-align: right; padding-left: var(--s-4); white-space: nowrap; }
+.lines tfoot th, .lines tfoot td { font-weight: 500; border-bottom: 0; padding-top: 14px; }
+.lines__warn th, .lines__warn td { color: var(--bad); }
+@media (max-width: 479px) {
+  .lines thead { display: none; }
+  .lines tbody tr { display: grid; grid-template-columns: 1fr auto; border-bottom: 1px solid var(--p-line); padding: 8px 0; }
+  .lines tbody td { border: 0; padding: 2px 0; }
+  .lines tbody td:nth-child(2), .lines tbody td:nth-child(3) { display: none; }
+}
+
+/* timeline */
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline li { position: relative; padding: 0 0 var(--s-4) 24px; display: flex; flex-direction: column; gap: 4px; }
+.timeline li::before { content: ""; position: absolute; left: 4px; top: 8px; width: 9px; height: 9px; border-radius: 99px; background: var(--p-muted); }
+.timeline li::after { content: ""; position: absolute; left: 8px; top: 20px; bottom: 0; width: 1px; background: var(--p-line-strong); }
+.timeline li:last-child::after { display: none; }
+.timeline li[data-tone="ok"]::before { background: var(--ok); }
+.timeline li[data-tone="bad"]::before { background: var(--bad); }
+.timeline li[data-tone="warn"]::before { background: var(--warn); }
+.timeline li[data-tone="info"]::before { background: var(--info); }
+.timeline strong { font-weight: 500; }
+
+/* verdict banner: the most prominent element on /pay */
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: var(--s-4); align-items: center; padding: var(--s-5); border-radius: var(--r-lg); border: 2px solid; }
+.verdict__icon { width: 56px; height: 56px; border-radius: 99px; display: grid; place-items: center; color: #fff; }
+.verdict__icon svg { width: 30px; height: 30px; stroke-width: 2.4; }
+.verdict h2 { font-size: clamp(24px, 1vw + 18px, 32px); }
+.verdict p { font-size: var(--t-body); }
+.verdict--pass { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.verdict--pass .verdict__icon { background: var(--ok); }
+.verdict--fail { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.verdict--fail .verdict__icon { background: var(--bad); }
+.verdict--loading { background: var(--p-card); border-color: var(--p-line); }
+.verdict--loading .verdict__icon { background: var(--p-surface); }
+.verdict p, .verdict .small { color: var(--p-ink); }
+
+/* checklist */
+.checklist { list-style: none; margin: 0; padding: 0; }
+.checklist li { display: grid; grid-template-columns: 24px 1fr; gap: var(--s-3); padding: 12px var(--s-5); border-top: 1px solid var(--p-line); }
+.checklist li:first-child { border-top: 0; }
+.checklist__icon { width: 24px; height: 24px; border-radius: 99px; display: grid; place-items: center; color: #fff; margin-top: 1px; }
+.checklist__icon svg { width: 14px; height: 14px; stroke-width: 2.6; }
+.checklist li[data-ok="true"] .checklist__icon { background: var(--ok); }
+.checklist li[data-ok="false"] { background: var(--bad-bg); }
+.checklist li[data-ok="false"] .checklist__icon { background: var(--bad); }
+.checklist li[data-ok="false"] strong { color: var(--bad); }
+.checklist strong { font-weight: 500; display: block; }
+.checklist p { font-size: var(--t-small); color: var(--p-ink); }
+.checklist__state { font-size: var(--t-label); font-weight: 600; margin-left: 6px; }
+
+/* pay progress */
+.progress { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); counter-reset: step; }
+.progress li { display: flex; flex-direction: column; gap: 6px; font-size: var(--t-label); font-weight: 500; color: var(--p-muted); }
+.progress li::before { content: ""; height: 4px; border-radius: 2px; background: var(--p-surface); transition: background-color .3s; }
+.progress li[data-state="done"] { color: var(--ok); }
+.progress li[data-state="done"]::before { background: var(--ok); }
+.progress li[data-state="active"] { color: var(--p-ink); }
+.progress li[data-state="active"]::before { background: linear-gradient(90deg, var(--p-accent) 0 50%, var(--p-surface) 50% 100%); background-size: 200% 100%; animation: bar 1.1s linear infinite; }
+.progress li[data-state="error"] { color: var(--bad); }
+.progress li[data-state="error"]::before { background: var(--bad); }
+@keyframes bar { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* receipt */
+.receipt { border-top: 4px solid var(--ok); }
+
+/* merchant table, collapses to cards under 760px */
+.table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.table th, .table td { text-align: left; padding: 14px var(--s-4); border-bottom: 1px solid var(--p-line); vertical-align: middle; }
+.table thead th { font-size: var(--t-label); font-weight: 500; color: var(--p-muted); background: var(--p-card); }
+.table tbody tr { cursor: pointer; transition: background-color .15s; }
+.table tbody tr:hover { background: rgba(51, 50, 49, .035); }
+.table tbody tr[aria-selected="true"] { background: rgba(92, 107, 84, .1); }
+.table .num { text-align: right; }
+.table button.rowlink { all: unset; cursor: pointer; font-weight: 500; }
+.table button.rowlink:focus-visible { outline: 2px solid var(--p-accent); outline-offset: 2px; }
+@media (max-width: 759px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--p-line); }
+  .table td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: var(--s-3); }
+  .table td::before { content: attr(data-label); color: var(--p-muted); font-size: var(--t-label); }
+  .table .num { text-align: left; }
+}
+
+/* drawer for invoice detail */
+.drawer-back { position: fixed; inset: 0; background: rgba(51, 50, 49, .35); z-index: 25; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--p-bg); z-index: 26; overflow-y: auto; border-left: 1px solid var(--p-line); display: flex; flex-direction: column; }
+.drawer__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--p-line); position: sticky; top: 0; background: var(--p-bg); }
+.drawer__body { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); }
+
+/* setup wizard steps */
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-4); counter-reset: s; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 36px 1fr; gap: var(--s-4); }
+.steps > li::before { content: counter(s); width: 36px; height: 36px; border-radius: 99px; display: grid; place-items: center; font-weight: 500; background: var(--p-surface); }
+.steps > li[data-done="true"]::before { content: "✓"; background: var(--ok); color: #fff; }
+
+.codeblock { margin: 0; padding: var(--s-4); background: var(--p-inv-bg); color: var(--p-inv-ink); border-radius: var(--r-md); font: 13px/1.6 var(--font-mono); overflow-x: auto; white-space: pre; }
+
+.stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); }
+.stat-row .card { display: flex; flex-direction: column; gap: 6px; }
+.stat-row strong { font-size: 28px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+@media (max-width: 759px) { .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

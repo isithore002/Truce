@@ -33,5 +33,5 @@ export const chain = whitechainSepolia;
 export const CHAIN_ID = chain.id;
 export const EXPLORER = chain.blockExplorers.default.url;
 
-export const explorerTx = (hash: string, base = EXPLORER) => `${base}/tx/${hash}`;
-export const explorerAddress = (addr: string, base = EXPLORER) => `${base}/address/${addr}`;
+export const explorerTx = (hash: string, base: string = EXPLORER) => `${base}/tx/${hash}`;
+export const explorerAddress = (addr: string, base: string = EXPLORER) => `${base}/address/${addr}`;
