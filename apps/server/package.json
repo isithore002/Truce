@@ -1,0 +1,14 @@
+{
+  "name": "@truce/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@truce/invoice-lib": "*",
+    "viem": "^2.57.16"
+  }
+}
