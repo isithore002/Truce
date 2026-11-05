@@ -1,0 +1,104 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import type { InvoiceDocWire } from "@truce/invoice-lib";
+import type { VerifyView } from "../src/api";
+import { Checklist, ExampleTag, InvoiceCard } from "../src/components";
+
+const ids = [
+  "document_valid",
+  "signature_valid",
+  "domain_file_reachable",
+  "merchant_matches_domain_file",
+  "payout_in_domain_file",
+  "domain_hash_matches",
+  "chain_and_token_allowed",
+  "not_expired",
+  "memo_hash_matches_details",
+  "payer_ok",
+] as const;
+
+const verdict = (failing: string[] = []): VerifyView => ({
+  result: failing.length ? "FAIL" : "PASS",
+  checks: ids.map((id) => ({ id, ok: !failing.includes(id), message: failing.includes(id) ? `${id} failed message` : `${id} ok message` })),
+  onchain: { paid: false },
+});
+
+const doc = {
+  version: 1,
+  invoice: {
+    invoiceId: "0x" + "00".repeat(32),
+    merchant: "0x19d47570BA52E058bD6432009b2705F799b851Dc",
+    payout: "0x19d47570BA52E058bD6432009b2705F799b851Dc",
+    token: "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+    amount: "1250000000",
+    dueDate: "1767225600",
+    expiry: "1767484800",
+    payer: "0x0000000000000000000000000000000000000000",
+    domainHash: "0x" + "11".repeat(32),
+    memoHash: "0x" + "22".repeat(32),
+  },
+  signature: "0x" + "33".repeat(65),
+  domain: "northlight-design.example",
+  details: {
+    merchantName: "Northlight Design Studio",
+    clientName: "Beta Labs",
+    lineItems: [{ description: "Brand identity", quantity: "1", unitPrice: "1250000000" }],
+    notes: "Net 30",
+    example: true,
+  },
+} as unknown as InvoiceDocWire;
+
+describe("Checklist", () => {
+  it("shows a big PASS with all ten checks ticked", () => {
+    const html = renderToStaticMarkup(<Checklist verdict={verdict()} domain="northlight-design.example" />);
+    expect(html).toContain("verdict pass");
+    expect(html).toContain(">PASS<");
+    expect(html).toContain("match what northlight-design.example published and signed");
+    expect((html.match(/data-check=/g) ?? []).length).toBe(10);
+    expect(html).not.toContain('class="bad"');
+  });
+
+  it("shows FAIL, says not to pay, and marks exactly the failing checks", () => {
+    const html = renderToStaticMarkup(<Checklist verdict={verdict(["signature_valid", "payout_in_domain_file"])} />);
+    expect(html).toContain("verdict fail");
+    expect(html).toContain(">FAIL<");
+    expect(html).toContain("Do not pay this invoice. 2 checks failed.");
+    expect((html.match(/class="bad"/g) ?? []).length).toBe(2);
+    expect(html).toContain("Payout wallet is on the merchant&#x27;s list");
+    expect(html).toContain("payout_in_domain_file failed message");
+  });
+
+  it("uses the singular for one failed check", () => {
+    expect(renderToStaticMarkup(<Checklist verdict={verdict(["not_expired"])} />)).toContain("1 check failed.");
+  });
+});
+
+describe("InvoiceCard", () => {
+  it("shows the amount, line items, dates and the full payout wallet", () => {
+    const html = renderToStaticMarkup(<InvoiceCard doc={doc} />);
+    expect(html).toContain("Northlight Design Studio");
+    expect(html).toContain("billed to Beta Labs");
+    expect(html).toContain("1,250.00 USDT");
+    expect(html).toContain("Brand identity");
+    expect(html).toContain("1 Jan 2026");
+    expect(html).toContain("0x19d47570BA52E058bD6432009b2705F799b851Dc"); // full address, not shortened
+  });
+
+  it("says On receipt when there is no due date", () => {
+    const d = { ...doc, invoice: { ...doc.invoice, dueDate: "0" } };
+    expect(renderToStaticMarkup(<InvoiceCard doc={d} />)).toContain("On receipt");
+  });
+
+  it("escapes hostile text from the invoice instead of rendering it as markup", () => {
+    const d = { ...doc, details: { ...doc.details, merchantName: "<img src=x onerror=alert(1)>" } };
+    const html = renderToStaticMarkup(<InvoiceCard doc={d} />);
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
+  });
+});
+
+describe("ExampleTag", () => {
+  it("is labelled EXAMPLE DATA", () => {
+    expect(renderToStaticMarkup(<ExampleTag />)).toContain("EXAMPLE DATA");
+  });
+});
