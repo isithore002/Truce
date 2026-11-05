@@ -56,7 +56,7 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [x] Spec frozen; booth feedback folded in; team size = one developer
 - [x] Repo scaffolded, history rebuilt into small commits, commit-size hook enabled
 - [x] Gate 1 read-only PASS (domain name/version resolved)
-- [ ] S0: Gate 1 LIVE (two funded throwaway wallets; result goes into `WHITECHAIN_FEEDBACK.md`)
+- [x] S0: Gate 1 LIVE PASS 2026-11-06 (redeem, replay/payee/window rejections, signed cancel; recorded in `WHITECHAIN_FEEDBACK.md`)
 - [ ] C1 safety net (about 07:20 Nov 6, then sleep): `InvoiceSettler` + tests, verified on 1874, one real USDT settlement from a script, swapped payout reverts
 - [ ] C2 (about 23:20 Nov 6; 50% Go/No-Go about 16:25): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
 - [ ] C3 (about 02:05 Nov 7): merchant dashboard, CSV, SDK, example merchant demo app
@@ -64,4 +64,4 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [ ] C5 (by 08:00 Nov 7): README, `WHITECHAIN_FEEDBACK.md`, demo video (2-4 min), radar rerun, `npm run check:commits`, submit (Whitechain selected)
 
 ## Open items (do not block)
-Signed `cancelAuthorization` behaviour (gate checks it); faucet drip mismatch; Soul registry owner key (README open question); whether other entries appear with domain verification (radar).
+Soul registry owner key (README open question); whether other entries appear with domain verification (radar).
