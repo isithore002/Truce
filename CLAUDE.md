@@ -57,7 +57,7 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [x] Repo scaffolded, history rebuilt into small commits, commit-size hook enabled
 - [x] Gate 1 read-only PASS (domain name/version resolved)
 - [x] S0: Gate 1 LIVE PASS 2026-11-06 (redeem, replay/payee/window rejections, signed cancel; recorded in `WHITECHAIN_FEEDBACK.md`)
-- [x] C1 safety net DONE 2026-11-06 (tag `c1`): `InvoiceSettler` `0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7` verified on 1874, one real 0.01 USDT settlement (tx `0xed25b41a...88fb`), swapped payout rejected. Also done: invoice-lib incl. verify pipeline (T08 to T10), chain module real + mock (T11, T11b). Next: T14 to T16 server routes, then the web app (C2).
+- [x] C1 safety net DONE 2026-11-06 (tag `c1`): `InvoiceSettler` `0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7` verified on 1874, one real 0.01 USDT settlement (tx `0xed25b41a...88fb`), swapped payout rejected. Also done: invoice-lib incl. verify pipeline (T08 to T10), chain module real + mock (T11, T11b). Server routes T14 to T16 done (create/get/list, verify, pay-now authorize, CSV, /healthz, SSRF-guarded domain fetch; run `npm run server` then `npm run e2e:api`). Next: the web app (T17 to T20) for C2.
 - [ ] C2 (about 23:20 Nov 6; 50% Go/No-Go about 16:25): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
 - [ ] C3 (about 02:05 Nov 7): merchant dashboard, CSV, SDK, example merchant demo app
 - [ ] C4 = FEATURE FREEZE (about 03:05 Nov 7): key pinning (MUST); due-date mode, health check, cancel, refund only if ahead of schedule
