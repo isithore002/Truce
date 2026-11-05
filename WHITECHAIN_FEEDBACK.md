@@ -28,5 +28,6 @@ Everything below was observed on 2026-11-05 unless marked "to confirm".
   - A signed `receiveWithAuthorization` was redeemed on chain by the payee (`msg.sender == to`), 0.01 USDT: https://explorer.testnet.whitechain.io/tx/0x031a1b8954ceb1748b7f94abbaf8e12db56370274e8e43394f00bc483cec59ac
   - Replay of the same authorization, redemption by anyone other than the payee, redemption before `validAfter` and redemption after `validBefore` were all rejected. So due-date collection (`validAfter` = due date) works.
   - A signed `cancelAuthorization`, relayed by a different account, succeeded, and the cancelled authorization could no longer be redeemed: https://explorer.testnet.whitechain.io/tx/0x4eaf18e8c068e42f50875802cc3cb7faa6d955c132a221a6a78dfd9db9a84ec7
-- Contract deploy and verification experience: _pending_
+- **Contract deploy and verification (2026-11-06): worked first time.** `forge script ... --broadcast` from Git Bash on native Windows deployed `InvoiceSettler` (1,238,694 gas, block 12317840, about 0.012 WBT at the 10 gwei the node quoted): https://explorer.testnet.whitechain.io/address/0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7
+  `forge verify-contract --verifier blockscout --verifier-url https://explorer.testnet.whitechain.io/api/` went from "Pending in queue" to "Pass - Verified" in under a minute, with solc 0.8.30 and evm `prague` as the docs say. Small note: Blockscout shows the license as "none" although the source carries an SPDX identifier.
 - Relayer / gas experience: _pending_
