@@ -23,8 +23,9 @@ export class ChainError extends Error {
     readonly code: ChainErrorCode,
     message: string,
     readonly details?: Record<string, unknown>,
+    options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, options);
     this.name = "ChainError";
   }
 }
@@ -71,7 +72,7 @@ export function mapChainError(e: unknown): ChainError {
       return new ChainError(code, message, name ? { contractError: name } : undefined);
     }
     // Not a contract revert: RPC down, relayer out of gas money, bad config... never blame the buyer.
-    return new ChainError("INTERNAL", "The chain could not be reached or returned an unexpected error.");
+    return new ChainError("INTERNAL", "The chain could not be reached or returned an unexpected error.", undefined, { cause: e });
   }
-  return new ChainError("INTERNAL", "Unexpected error.");
+  return new ChainError("INTERNAL", "Unexpected error.", undefined, { cause: e });
 }

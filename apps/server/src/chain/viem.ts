@@ -5,6 +5,7 @@ import {
   http,
   type Address,
   type Hex,
+  type LocalAccount,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { BuyerAuth, InvoiceDoc } from "@truce/invoice-lib";
@@ -46,14 +47,15 @@ export class ViemChain implements ChainModule {
   readonly config: ChainPublicConfig;
   private readonly pub: PublicApi;
   private readonly wallet: WalletApi;
-  private readonly relayer: Address;
+  /** Local account: viem signs with the key and sends a raw transaction (the public RPC has no eth_sendTransaction). */
+  private readonly account: LocalAccount;
   private readonly budget: RelayerBudget;
   private readonly limiter: RateLimiter;
   private chainChecked = false;
 
   constructor(private readonly cfg: ChainConfig, deps: ViemChainDeps = {}) {
     const account = privateKeyToAccount(cfg.relayerKey);
-    this.relayer = account.address;
+    this.account = account;
     const chain = defineChain({
       id: cfg.chainId,
       name: "Whitechain Sepolia",
@@ -83,7 +85,7 @@ export class ViemChain implements ChainModule {
     }
 
     const args = [inv, doc.signature, { from: auth.from, validAfter: auth.validAfter, validBefore: auth.validBefore, v: auth.v, r: auth.r, s: auth.s }];
-    const call = { account: this.relayer, address: this.cfg.settler, abi: settlerAbi, functionName: "settle", args } as const;
+    const call = { account: this.account, address: this.cfg.settler, abi: settlerAbi, functionName: "settle", args } as const;
 
     let request: unknown;
     let gas: bigint;

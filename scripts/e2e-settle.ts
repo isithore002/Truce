@@ -156,5 +156,8 @@ async function main() {
 
 main().catch((e) => {
   console.error(`\nFAILED: ${e instanceof Error ? e.message : e}`);
+  // Operator-only detail (never shown to buyers). viem short messages carry no keys.
+  const cause = e instanceof Error ? (e.cause as { shortMessage?: string; message?: string } | undefined) : undefined;
+  if (cause) console.error(`  cause: ${cause.shortMessage ?? cause.message}`);
   process.exit(1);
 });

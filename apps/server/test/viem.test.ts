@@ -61,6 +61,16 @@ describe("ViemChain.settle", () => {
     expect(wallet.writeContract.mock.calls[0][0]).toMatchObject({ simulated: true, gas: 240_000n });
   });
 
+  it("simulates and sends with the local relayer account, so viem signs locally (no eth_sendTransaction)", async () => {
+    const { chain, pub } = make();
+    const doc = await makeDoc();
+    await chain.settle(doc, await makeAuth(doc));
+    const sim = pub.simulateContract as unknown as { mock: { calls: [{ account: { type: string; signTransaction?: unknown } }][] } };
+    const account = sim.mock.calls[0][0].account;
+    expect(account.type).toBe("local");
+    expect(typeof account.signTransaction).toBe("function");
+  });
+
   it("a failing simulation sends nothing and costs nothing (swapped payout)", async () => {
     const { chain, wallet, budget } = make({
       simulateContract: vi.fn(async () => {
