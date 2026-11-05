@@ -1,7 +1,9 @@
 import { concat, encodeAbiParameters, keccak256, pad, parseAbiParameters, stringToHex, toHex, type Address, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { domainHash, invoiceHash } from "../src/hash.js";
 import { canonicalJson, memoHash } from "../src/memo.js";
+import { recoverMerchant, signInvoice } from "../src/sign.js";
 import type { Invoice, InvoiceDetails, SigningContext } from "../src/types.js";
 
 export const ctx: SigningContext = {
@@ -123,5 +125,38 @@ describe("invoiceHash", () => {
     const h = invoiceHash(baseInvoice, ctx);
     expect(invoiceHash(baseInvoice, { ...ctx, chainId: 1875 })).not.toBe(h);
     expect(invoiceHash(baseInvoice, { ...ctx, verifyingContract: "0x0000000000000000000000000000000000005678" })).not.toBe(h);
+  });
+});
+
+// Widely published Anvil/Hardhat default account 0 test key. Never holds real funds.
+export const ANVIL_KEY_0: Hex = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const merchantAccount = privateKeyToAccount(ANVIL_KEY_0);
+
+describe("signInvoice and recoverMerchant", () => {
+  it("anvil account 0 is the merchant in the fixtures", () => {
+    expect(merchantAccount.address).toBe(baseInvoice.merchant);
+  });
+
+  it("round trips: the recovered signer is the merchant", async () => {
+    const sig = await signInvoice(merchantAccount, baseInvoice, ctx);
+    expect(await recoverMerchant(baseInvoice, sig, ctx)).toBe(merchantAccount.address);
+  });
+
+  it("changing any single field breaks recovery", async () => {
+    const sig = await signInvoice(merchantAccount, baseInvoice, ctx);
+    const swapped: Invoice = { ...baseInvoice, payout: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" };
+    expect(await recoverMerchant(swapped, sig, ctx)).not.toBe(merchantAccount.address);
+    const tampered: Invoice = { ...baseInvoice, amount: baseInvoice.amount + 1n };
+    expect(await recoverMerchant(tampered, sig, ctx)).not.toBe(merchantAccount.address);
+    const memo: Invoice = { ...baseInvoice, memoHash: memoHash({ ...details, notes: "Net 60" }) };
+    expect(await recoverMerchant(memo, sig, ctx)).not.toBe(merchantAccount.address);
+  });
+
+  it("a signature does not verify on another chain or contract", async () => {
+    const sig = await signInvoice(merchantAccount, baseInvoice, ctx);
+    expect(await recoverMerchant(baseInvoice, sig, { ...ctx, chainId: 1875 })).not.toBe(merchantAccount.address);
+    expect(
+      await recoverMerchant(baseInvoice, sig, { ...ctx, verifyingContract: "0x0000000000000000000000000000000000005678" }),
+    ).not.toBe(merchantAccount.address);
   });
 });
