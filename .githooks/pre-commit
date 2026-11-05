@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks any commit that inserts or deletes more than 1000 lines (ETHGlobal flags giant commits).
+# Enable once per clone: npm run setup:hooks
+node tools/check-commit-size.js --staged
