@@ -1,0 +1,54 @@
+import Fastify, { type FastifyInstance } from "fastify";
+import type { DomainResolver } from "@truce/invoice-lib";
+import type { ChainModule } from "../chain/types.js";
+import type { Store } from "../shared/store.js";
+import { errorBody, errorHandler } from "./errors.js";
+import { registerRoutes } from "./routes.js";
+
+export interface AppDeps {
+  chain: ChainModule;
+  store: Store;
+  /** Fetches a merchant's /.well-known/truce.json (SSRF-guarded in production). */
+  resolveDomain: DomainResolver;
+  /** Unix seconds. Injectable so tests can move time. */
+  now?: () => number;
+  /** Where payment links point (the web app). */
+  publicBaseUrl?: string;
+  /** Origin allowed to call the API from a browser. */
+  webOrigin?: string;
+  /** True when fictional *.example merchant domains are served from local fixtures. */
+  exampleMode?: boolean;
+  logger?: boolean;
+}
+
+export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode">> {}
+
+export function buildApp(deps: AppDeps): FastifyInstance {
+  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 64 * 1024, trustProxy: false });
+  const ctx: AppContext = {
+    chain: deps.chain,
+    store: deps.store,
+    resolveDomain: deps.resolveDomain,
+    now: deps.now ?? (() => Math.floor(Date.now() / 1000)),
+    publicBaseUrl: (deps.publicBaseUrl ?? "http://localhost:5173").replace(/\/$/, ""),
+    exampleMode: deps.exampleMode ?? false,
+  };
+  const origin = deps.webOrigin ?? "http://localhost:5173";
+
+  app.addHook("onRequest", async (req, reply) => {
+    reply.header("access-control-allow-origin", origin);
+    reply.header("vary", "origin");
+    reply.header("x-content-type-options", "nosniff");
+    if (req.method === "OPTIONS") {
+      reply.header("access-control-allow-methods", "GET,POST,OPTIONS");
+      reply.header("access-control-allow-headers", "content-type");
+      return reply.status(204).send();
+    }
+  });
+
+  app.setErrorHandler(errorHandler);
+  app.setNotFoundHandler((_req, reply) => reply.status(404).send(errorBody("NOT_FOUND", "No such endpoint.")));
+
+  registerRoutes(app, ctx);
+  return app;
+}
