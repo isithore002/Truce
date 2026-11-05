@@ -20,6 +20,7 @@ Everything below was observed on 2026-11-05 unless marked "to confirm".
 9. **Fee examples in the docs assume $50 per WBT** while WBT trades near $73, so illustrative costs are understated.
 10. **No documented ERC-4337 / paymaster / gas-sponsorship guidance.** Because the token supports EIP-3009, a relayer is the workable path for gasless payments; a short guide would help.
 11. **Open question:** who holds the SoulRegistry owner key long-term (currently a single address). No answer yet.
+12. **Foundry on native Windows:** the deploy guide says PowerShell and Command Prompt cannot run Foundry and WSL is required. Foundry 1.5.1 installed and `forge init` ran successfully in Git Bash on native Windows here (we have not yet tested a full build and deploy from it). The guide could mention that Git Bash works.
 
 ## Build-time notes (fill in as we go)
 - Gate 1 live result: _pending_

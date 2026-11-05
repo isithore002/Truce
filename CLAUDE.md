@@ -1,7 +1,7 @@
 # Truce: context for Claude Code sessions
 
 ETHGlobal Mumbai 2026, Whitechain **Operate** track. **Submission deadline: Sat 2026-11-07 09:00 IST.** Select Whitechain in the ETHGlobal dashboard (one Whitechain prize per project).
-Read `docs/SPEC.md` first: its top block is the FROZEN scope and the source of truth. `docs/README.md` indexes every other document (decisions log, competitors, Whitechain research, Soul, booth notes, pitch and judge Q&A, verified chain facts).
+Read `docs/SPEC.md` first: its top block is the FROZEN scope and the source of truth. The full design package (diagrams, API, contract design, build plan, demo script, ready-to-paste task prompts) is in `docs/design/00-INDEX.md`. `docs/README.md` indexes every other document (decisions log, competitors, Whitechain research, Soul, booth notes, pitch and judge Q&A, verified chain facts).
 
 ## What we are building
 Invoices a buyer can verify before paying, collected on the due date, paid gaslessly in USDT on Whitechain Sepolia.
@@ -57,10 +57,10 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [x] Repo scaffolded, history rebuilt into small commits, commit-size hook enabled
 - [x] Gate 1 read-only PASS (domain name/version resolved)
 - [ ] S0: Gate 1 LIVE (two funded throwaway wallets; result goes into `WHITECHAIN_FEEDBACK.md`)
-- [ ] C1 safety net (about 06:00 Nov 6): `InvoiceSettler` + tests, verified on 1874, one real USDT settlement from a script, swapped payout reverts
-- [ ] C2 (about 18:00 Nov 6): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
-- [ ] C3 (about 21:30 Nov 6): merchant dashboard, CSV, SDK, example merchant demo app
-- [ ] C4 = FEATURE FREEZE (about 01:30 Nov 7): key pinning, due-date mode, health check + Failed state, buyer cancel; refund in contract + tests only
+- [ ] C1 safety net (about 07:20 Nov 6, then sleep): `InvoiceSettler` + tests, verified on 1874, one real USDT settlement from a script, swapped payout reverts
+- [ ] C2 (about 23:20 Nov 6; 50% Go/No-Go about 16:25): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
+- [ ] C3 (about 02:05 Nov 7): merchant dashboard, CSV, SDK, example merchant demo app
+- [ ] C4 = FEATURE FREEZE (about 03:05 Nov 7): key pinning (MUST); due-date mode, health check, cancel, refund only if ahead of schedule
 - [ ] C5 (by 08:00 Nov 7): README, `WHITECHAIN_FEEDBACK.md`, demo video (2-4 min), radar rerun, `npm run check:commits`, submit (Whitechain selected)
 
 ## Open items (do not block)

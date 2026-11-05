@@ -6,6 +6,7 @@
 3. `INTERFACES.md`: invoice type, API and module interfaces (keep both sides in sync)
 4. `ARCHITECTURE.md` and `WORKFLOW.md`: pieces, solo plan, cut gates, checkpoints
 5. `PITCH.md`: opening, demo storyline, judge Q&A, claims to avoid
+6. `design/00-INDEX.md`: **full design package** (A product, B diagrams, C technical, D build plan, E submission and demo, F task list with ready-to-paste prompts and open questions)
 
 ## Why we decided what we decided
 - `DECISIONS-LOG.md`: ideas dropped and why; scope swaps; claims we will not make
