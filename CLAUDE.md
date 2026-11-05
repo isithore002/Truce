@@ -13,7 +13,7 @@ pays only the signed payout wallet, settles each invoice once, and supports capp
 - MUST: `InvoiceSettler` + Foundry tests + verified deploy; invoice sign/verify library; relayer; SDK (~20 lines for a merchant app); merchant dashboard (create, status, CSV); buyer page with PASS/FAIL;
   public verify page; key pinning (payee-change warning); one real USDT payment with explorer link; README; `WHITECHAIN_FEEDBACK.md`; 2-4 min demo incl. the swapped-payout attack.
 - SHOULD: pay-on-due-date with a pre-due balance check and a clear Failed state; capped refunds (contract + tests only, no refund UI).
-- STRETCH: mocked Soul badge. OUT: stealth addresses, real Soul reads, mainnet transactions, DNSSEC, approvals, auditor package.
+- STRETCH: mocked Soul badge, only if more than 2 hours are spare after checkpoint C4. OUT: stealth addresses, real Soul reads, mainnet transactions, DNSSEC, approvals, auditor package, webhooks (solo build).
 - Cut order if late: Soul badge, key pinning, CSV styling, due-date collection. Never cut: on-chain payout enforcement, PASS/FAIL badge, one real USDT payment.
 
 ## Hard rules
@@ -28,7 +28,7 @@ pays only the signed payout wallet, settles each invoice once, and supports capp
    - Check before committing: `npm run check:commits` (whole history) or `node tools/check-commit-size.js --staged`. Enable the blocking pre-commit hook once per clone: `npm run setup:hooks`.
    - If something is over the limit, split it (`git add <files>`, `git add -p`) before committing. Do not rewrite history after the repo is pushed or shared.
    - History was rebuilt into small commits on 2026-11-05 (the first scaffold commit had been +31,689 lines because forge-std was vendored; it is now a submodule: run `git submodule update --init --recursive` after cloning).
-7. End commit messages with the attribution line the harness provides. Document AI use in `docs/AI-USE.md`. Commit often; both developers commit under their own git identity.
+7. End commit messages with the attribution line the harness provides. Document AI use in `docs/AI-USE.md`. Commit often under your own git identity.
 8. Ask before expanding scope. Prefer the simplest thing that works and is tested.
 
 ## Verified facts
@@ -42,11 +42,9 @@ pays only the signed payout wallet, settles each invoice once, and supports capp
   add a pre-due balance check and a clear failed state; show the swapped-payout FAIL; use a made-up labelled example merchant.
 
 ## Layout
-Two developers work in parallel: **A = chain side, B = product side.** Read `docs/ARCHITECTURE.md`, `docs/INTERFACES.md` (the contract between A and B) and `docs/WORKFLOW.md` (ownership, branches, checkpoints) before editing.
-- A owns: `contracts/`, `packages/invoice-lib/`, `apps/server/src/chain/`, `gate/`, `tools/`
-- B owns: `apps/web/`, `sdk/`, `examples/merchant-demo/`, `apps/server/src/api/`, `apps/server/src/shared/store.ts`
-- Shared: `docs/`, root config, `README.md`, `WHITECHAIN_FEEDBACK.md`, this file (each edits only their own lines)
-- Do not edit the other developer's folders; open a PR. Use `CHAIN_MODE=mock` so nobody blocks anybody.
+One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates are in `docs/WORKFLOW.md`; read it with `docs/ARCHITECTURE.md` and `docs/INTERFACES.md` before building.
+- Modules (code organisation, not team ownership): `contracts/`, `packages/invoice-lib/`, `apps/server/src/chain/` (relayer, health, scheduler), `apps/server/src/api/` (REST, store, domain check, CSV), `apps/web/`, `sdk/`, `examples/merchant-demo/`, `gate/`, `tools/`.
+- Use `CHAIN_MODE=mock` to build the UI without the chain. Build vertical slices; keep `main` demo-ready at every checkpoint and tag it (`c1`, `c2`, ...).
 
 ## Commands
 - Gate 1 (read-only, no keys): `cd gate && npm install && npm run gate`. Live (needs `gate/.env` with two throwaway keys): `npm run gate:live:cancel`.
@@ -54,14 +52,16 @@ Two developers work in parallel: **A = chain side, B = product side.** Read `doc
 - Contracts: `cd contracts && forge build && forge test` (first clone: `git submodule update --init --recursive` for forge-std).
 - Commit-size check: `npm run check:commits`; enable the hook: `npm run setup:hooks`.
 
-## Status (update as you go)
-- [x] Spec frozen; booth feedback folded in
+## Status (update as you go; times are targets, see docs/WORKFLOW.md)
+- [x] Spec frozen; booth feedback folded in; team size = one developer
+- [x] Repo scaffolded, history rebuilt into small commits, commit-size hook enabled
 - [x] Gate 1 read-only PASS (domain name/version resolved)
-- [ ] Gate 1 LIVE (needs two funded throwaway wallets; result goes into `WHITECHAIN_FEEDBACK.md`)
-- [ ] `InvoiceSettler` + tests + verified deploy on 1874
-- [ ] invoice-lib, relayer, SDK, web (merchant, buyer, verify), key pinning
-- [ ] due-date collection + health check + Failed state; refund (contract only)
-- [ ] README, `WHITECHAIN_FEEDBACK.md`, demo video (2-4 min), radar rerun, submit before 09:00 IST Nov 7
+- [ ] S0: Gate 1 LIVE (two funded throwaway wallets; result goes into `WHITECHAIN_FEEDBACK.md`)
+- [ ] C1 safety net (about 06:00 Nov 6): `InvoiceSettler` + tests, verified on 1874, one real USDT settlement from a script, swapped payout reverts
+- [ ] C2 (about 18:00 Nov 6): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
+- [ ] C3 (about 21:30 Nov 6): merchant dashboard, CSV, SDK, example merchant demo app
+- [ ] C4 = FEATURE FREEZE (about 01:30 Nov 7): key pinning, due-date mode, health check + Failed state, buyer cancel; refund in contract + tests only
+- [ ] C5 (by 08:00 Nov 7): README, `WHITECHAIN_FEEDBACK.md`, demo video (2-4 min), radar rerun, `npm run check:commits`, submit (Whitechain selected)
 
 ## Open items (do not block)
 Signed `cancelAuthorization` behaviour (gate checks it); faucet drip mismatch; Soul registry owner key (README open question); whether other entries appear with domain verification (radar).

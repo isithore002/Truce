@@ -32,3 +32,10 @@ Dates are 2026-11-05 unless noted. "Evidence" names the file or source that back
 
 ## Claims we agreed NOT to make
 First/only/world-first; "guaranteed payment" or "locked funds"; "needs Whitechain" (say: uses the track USDT, EIP-3009 and a WBT relayer; the design is portable); "verified business" (Soul is personal KYC); ERP integration (we only export a CSV); real users or adoption numbers; any mainnet test we did not run.
+
+## Team size (2026-11-05 23:21 IST): one developer
+The two-developer split (chain side / product side) was dropped; one person now builds everything with 33.6 hours left.
+- Kept: the module boundaries (contracts, library, chain module, api, web) as code organisation, and `CHAIN_MODE=mock`.
+- Replaced: ownership and PR rules with vertical slices, checkpoints C1 to C5 with tags, and clock-based cut gates (`WORKFLOW.md`).
+- Cut (removals under the change rule): webhooks, database (JSON-file store), Soul badge unless more than 2 hours are spare after C4.
+- Built first as a safety net: a script that settles one real USDT invoice (C1), so a working submission exists early.

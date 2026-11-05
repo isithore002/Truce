@@ -3,6 +3,8 @@
 > ## FROZEN as of 2026-11-05 (about 21:30 IST). About 35 hours to the Nov 7 09:00 IST deadline.
 > **Rule:** nothing is added unless something of equal size is removed. Decisions below are closed.
 >
+> **Team: one developer** (decided 2026-11-05 23:21 IST, 33.6 hours left). Solo trims, which are removals and so allowed under the rule: webhooks are roadmap (dashboard status only); the Soul badge is out unless more than 2 hours are spare after checkpoint C4; one server process with a JSON-file store (no database); plain, functional UI; `CHAIN_MODE=mock` kept so the UI can be built without the chain. Plan, checkpoints C1 to C5 and cut gates: `WORKFLOW.md`.
+>
 > **Product:** invoices a buyer can verify before paying, collected on the due date, paid gaslessly in USDT on Whitechain Sepolia (chain 1874).
 > **Track:** Operate only. **Contract:** `InvoiceSettler` (written from scratch; do not copy `PaymentRouter`).
 > **Token:** track USDT `0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7` (EIP-3009). **Network:** testnet only, no mainnet transactions.

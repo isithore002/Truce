@@ -1,6 +1,6 @@
 # Interfaces (the contract between A and B)
 
-**Frozen in the first "interface hour".** After that, a change needs a PR that the other developer approves, and the golden vectors must still pass.
+**Treat as frozen.** If something here is wrong, fix this file first, then the code, and update the golden vectors in the same commit.
 If something here is wrong or missing, fix this file first, then the code.
 
 ## 1. Invoice (EIP-712), single source of truth
@@ -56,7 +56,7 @@ Token EIP-712 domain (track USDT, verified): name `Tether USD`, version `1`, cha
 Health `reason`: `NONE | LOW_BALANCE | AUTH_CANCELLED | AUTH_EXPIRING | BLOCKED`.
 `FAILED` keeps retrying until `validBefore`. The health check is a snapshot, not a lock. UI copy must say so.
 
-## 6. Backend REST API (owner B; the chain module is called through `ChainModule`)
+## 6. Backend REST API (module `api`; calls the chain module through `ChainModule`)
 | Method and path | Body / query | Returns |
 |---|---|---|
 | `POST /api/invoices` | invoice document | `201 { hash, link }` |
@@ -67,10 +67,10 @@ Health `reason`: `NONE | LOW_BALANCE | AUTH_CANCELLED | AUTH_EXPIRING | BLOCKED`
 | `POST /api/invoices/:hash/refund` | merchant refund authorization, `amount` | `202 { txHash }` |
 | `GET /api/merchants/:address/invoices` | | `Invoice summary[]` |
 | `GET /api/merchants/:address/export.csv` | | CSV (invoice id, names, amount, due, status, tx link, paid at) |
-Webhooks (merchant URL, JSON): `invoice.scheduled | invoice.at_risk | invoice.failed | invoice.paid | invoice.refunded` with `{ event, hash, status, reason?, txHash? }`.
+**Roadmap, not in the solo build.** Webhooks (merchant URL, JSON): `invoice.scheduled | invoice.at_risk | invoice.failed | invoice.paid | invoice.refunded` with `{ event, hash, status, reason?, txHash? }`.
 Errors: `{ error: { code, message } }`; contract custom errors are mapped to friendly messages.
 
-## 7. Chain module (owner A), called by the API and the scheduler
+## 7. Chain module (module `chain`), called by the API and the scheduler
 ```ts
 export interface ChainModule {
   settle(doc: InvoiceDoc, auth: BuyerAuth): Promise<{ txHash: `0x${string}` }>;
@@ -81,10 +81,10 @@ export interface ChainModule {
   startScheduler(): void; // settles due-date authorizations, runs health checks, updates Store
 }
 ```
-Implementations: `chain/mock.ts` (scripted, for B) and `chain/viem.ts` (A). Selected by `CHAIN_MODE`.
-Store (owner B, interface in `apps/server/src/shared/store.ts`, used by the scheduler): `get(hash)`, `put(doc)`, `setAuth(hash, auth)`, `setStatus(hash, status, health?, tx?)`, `dueSoon(now)`.
+Implementations: `chain/mock.ts` (scripted, lets the UI be built without the chain) and `chain/viem.ts` (real). Selected by `CHAIN_MODE`.
+Store (module `api`, interface in `apps/server/src/shared/store.ts`, used by the scheduler): `get(hash)`, `put(doc)`, `setAuth(hash, auth)`, `setStatus(hash, status, health?, tx?)`, `dueSoon(now)`.
 
-## 8. Contract surface (owner A). ABI is committed at `contracts/abi/InvoiceSettler.json` and regenerated on every contract change
+## 8. Contract surface. ABI is committed at `contracts/abi/InvoiceSettler.json` and regenerated on every contract change
 ```
 settle(Invoice inv, bytes merchantSig, Auth a)       // Auth { from, validAfter, validBefore, v, r, s }
 refund(bytes32 hash, uint256 amount, Auth merchantAuth)

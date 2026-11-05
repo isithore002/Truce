@@ -1,46 +1,37 @@
-# Two-developer workflow
+# Solo workflow (one developer)
 
-Time: about 34 hours to the Sat 2026-11-07 09:00 IST deadline. Two people, so the rule is: **own folders, share interfaces, merge often.**
+Decided 2026-11-05 23:21 IST: **one developer builds everything.** Deadline Sat 2026-11-07 09:00 IST, about 33.6 hours away. Plan for about 6 hours of sleep and about 2 hours of buffer, leaving roughly 25 hours of building.
+The chain/api/web split in `ARCHITECTURE.md` stays as **code organisation** (clear module boundaries), not as team ownership.
 
-## Ownership
-| Dev | Owns (only they edit; others open a PR) | Also does |
-|---|---|---|
-| **A: chain** | `contracts/`, `packages/invoice-lib/`, `apps/server/src/chain/`, `gate/`, `tools/` | deploy and verify contract, live Gate 1, WBT/USDT funding, relayer budget |
-| **B: product** | `apps/web/`, `sdk/`, `examples/merchant-demo/`, `apps/server/src/api/`, `apps/server/src/shared/store.ts` | UI copy, EXAMPLE DATA labelling, CSV, webhooks, demo script |
-| **Shared** | `docs/`, root `package.json`, `README.md`, `WHITECHAIN_FEEDBACK.md`, `CLAUDE.md` | A and B each edit only their own sections / lines |
-`docs/INTERFACES.md` is the contract. Changing it needs the other developer's OK in the same PR.
+## How to build: vertical slices with a safety net first
+Build the thinnest end-to-end path first, then widen it. After each checkpoint `main` must be demo-ready, tagged (`git tag c1`, `c2`, ...), and tests must pass.
+| Slice | Work | Target time | Checkpoint (must be true) |
+|---|---|---|---|
+| S0 | Fund two throwaway wallets, run live Gate 1 (`gate/`) | to about 01:00 Nov 6 | Gate 1 live PASS, or switch to the `permit` fallback |
+| S1 | `InvoiceSettler` + Foundry tests, `packages/invoice-lib` (type, hash, sign, verify), golden vector, CLI script: create -> sign -> authorize -> settle, deploy and verify | to about 06:00 Nov 6 | **C1 safety net:** verified contract on 1874 and one real USDT settlement with an explorer link, from a script. Swapped payout reverts. Then sleep (about 6 h) |
+| S2 | Server (one process, JSON-file store): create, get, verify (domain-file fetch, example domains from fixtures), authorize + settle now. Buyer page (PASS/FAIL, sign, pay) and public verify page | about 12:00 to 18:00 Nov 6 | **C2:** browser flow works: PASS then pay; swapped payout shows FAIL |
+| S3 | Merchant dashboard (create, list, status, CSV), SDK (~20 lines), example merchant demo app | to about 21:30 Nov 6 | **C3:** the full demo path runs without scripts |
+| S4 | Key pinning, due-date mode (`validAfter` + scheduler), health check + AT_RISK / FAILED, buyer cancel; refund in contract + tests only | to about 01:30 Nov 7 | **C4 = FEATURE FREEZE.** After this: fixes only |
+| S5 | README, `WHITECHAIN_FEEDBACK.md`, record the demo (2 to 4 min), rerun radar, submit | to about 08:00 Nov 7 | **C5:** submitted (Whitechain selected) with an hour of buffer |
+Shift the clock times if you start later; keep the order and the checkpoint rules.
 
-## Branches and merging
-- `main` always builds and its tests pass. Nobody force-pushes `main`.
-- Work on short branches: `a/<topic>` and `b/<topic>`. Merge to `main` at least every 2 to 3 hours (small PRs, squash or rebase).
-- Before merging: `git pull --rebase origin main`, run your own tests, run `npm run check` once it exists.
-- Commit often with a real message (judges read the history). Each developer commits under their own git identity.
-- **Commit size rule: no commit may insert or delete more than 1000 lines** (ETHGlobal flags giant commits). Aim for a few hundred. Run `npm run setup:hooks` once per clone so oversized commits are blocked, and `npm run check:commits` before merging. Never vendor dependencies; add them in small batches so the lockfile change stays under the limit.
-- Lockfile conflict: do not hand-merge; run `npm install` again and commit the result.
-- Never commit `.env`, keys, or `node_modules`.
+## Cut gates (decide by the clock, not by feel)
+- Missed **C1** by 08:00 Nov 6: stop widening. Make the script plus a minimal page the product.
+- Missed **C2** by 20:00 Nov 6: drop due-date mode, health check and pinning from the plan (pinning last to go).
+- Missed **C3** by 23:30 Nov 6: no SDK demo app; the merchant page alone is the integration story.
+- **Solo trims already decided:** webhooks are roadmap; the Soul badge is out unless more than 2 hours are spare after C4; no database (JSON-file store); plain functional UI; `CHAIN_MODE=mock` kept so the UI can be built without the chain.
+- Cut order if everything is late: Soul badge, webhooks, CSV styling, due-date mode, pinning. **Never cut:** on-chain payout enforcement, the PASS/FAIL badge, one real USDT payment, the swapped-payout demo.
 
-## Mock-first so nobody waits
-- **B never waits for the contract.** Use `CHAIN_MODE=mock` and the committed ABI stub. The buyer page, merchant dashboard and verify page are built against scripted results.
-- **A never waits for the UI.** Test through Foundry tests and a small CLI that creates, signs, authorizes and settles an invoice.
-- **Interface hour (first 1 to 2 hours, together):** agree `docs/INTERFACES.md`, commit the ABI stub (`contracts/abi/`), create the first golden vector, and agree the domain-file and link formats.
+## Git and commits
+- Work on `main` or very short branches; merge before each checkpoint. No force-push after the repo is shared.
+- **Commit size rule: no commit may insert or delete more than 1000 lines** (ETHGlobal flags giant commits). Aim for a few hundred, one logical change per commit. Run `npm run setup:hooks` once per clone (already enabled in this clone) and `npm run check:commits` before each checkpoint. Never vendor dependencies; add them in small batches so the lockfile change stays under the limit.
+- Commit often with a real message; judges read the history. Never commit `.env`, keys, or `node_modules`.
 
-## Checkpoints
-| When (IST) | Goal | Owner of the check |
-|---|---|---|
-| Nov 6, about 01:00 | Interfaces frozen, ABI stub and first vector committed, both can start | both |
-| Nov 6, about 09:00 | **Integration 1:** a script creates a signed invoice, authorizes, settles on Sepolia, hash matches in TS and Solidity | A leads |
-| Nov 6, about 19:00 | **Integration 2:** browser end to end (create, PASS, sign, pay, status, CSV), verify page works | B leads |
-| Nov 7, about 02:00 | **Feature freeze.** Only fixes, README, feedback file, demo | both |
-| Nov 7, 02:00 to 06:00 | Polish, README, `WHITECHAIN_FEEDBACK.md`, record demo (2 to 4 min), rerun radar | both |
-| Nov 7, 07:00 to 08:00 | Submit (select Whitechain, repo link, video). Buffer before 09:00 | both |
-Sleep in shifts; whoever is awake owns `main`.
-
-## Daily rhythm
-Every 3 to 4 hours: 10-minute sync, tick the checklist in `CLAUDE.md` (own lines only), merge branches, say what is blocked.
-If blocked on the other person's piece for more than 15 minutes, use the mock and keep going.
+## Rhythm
+Every 3 to 4 hours: tick the status checklist in `CLAUDE.md`, run tests, commit, check the clock against the table. If stuck on one problem for more than 45 minutes, use the mock or the fallback and move on.
 
 ## Definition of done per slice
 - Contract: tests pass, deployed and verified on chain 1874, ABI committed, explorer link in the README.
 - Chain module: works against Sepolia and has a mock; simulates before sending; no key in the repo.
-- API/UI: works with `CHAIN_MODE=mock` and with `testnet`; example data is labelled; errors are readable.
+- Server/UI: works with `CHAIN_MODE=mock` and with `testnet`; example data is labelled EXAMPLE DATA; errors are readable.
 - Docs: any claim in the README is either tested or marked "not tested".

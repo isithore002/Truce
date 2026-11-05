@@ -1,34 +1,34 @@
 # Architecture
 
-## Pieces and who owns them (A = chain side, B = product side)
+## Pieces and responsibilities (module boundaries; one developer builds all of it)
 
 ```
  Merchant browser            Buyer browser               Anyone (no wallet)
- apps/web /merchant (B)      apps/web /pay/:hash (B)     apps/web /verify (B)
+ apps/web /merchant      apps/web /pay/:hash     apps/web /verify
         \                          |                          /
          \----------- HTTPS -------+-------------------------/
                                    v
-                  apps/server  src/api   (B)  REST, invoice store, domain-file check, CSV, webhooks
+                  apps/server  src/api    REST, invoice store, domain-file check, CSV, webhooks
                                    |  Store interface (shared/store.ts)
                                    v
-                  apps/server  src/chain (A)  relayer: settle, health check, scheduler, budget/rate limit
+                  apps/server  src/chain  relayer: settle, health check, scheduler, budget/rate limit
                                    |  viem
                                    v
-        Whitechain Sepolia (1874):  InvoiceSettler (A)  ->  track USDT (EIP-3009)
+        Whitechain Sepolia (1874):  InvoiceSettler  ->  track USDT (EIP-3009)
                                    ^
-        packages/invoice-lib (A, shared): EIP-712 types, hash, sign/verify, domain-file check, golden vectors
-        sdk/ (B): createInvoice(), used by examples/merchant-demo (B) = the "~20 lines" demo app
+        packages/invoice-lib: EIP-712 types, hash, sign/verify, domain-file check, golden vectors
+        sdk/: createInvoice(), used by examples/merchant-demo = the "~20 lines" demo app
 ```
 
 ## Responsibilities
 | Piece | Does | Does NOT do |
 |---|---|---|
-| `contracts/` (A) | Verifies merchant signature, pulls via `receiveWithAuthorization`, pays only the signed payout, settles once, capped refund | Anything off-chain; domain checks |
-| `packages/invoice-lib/` (A, shared) | Single definition of the invoice type, hash and signing; domain-file fetch/verify logic; PASS/FAIL result type | Network calls to our server; UI |
-| `apps/server/src/chain` (A) | Simulate and send txs, due-date scheduler, health checks, WBT budget, rate limit | HTTP routes, storage schema |
-| `apps/server/src/api` (B) | REST endpoints, invoice store, server-side domain-file fetch (CORS), CSV export, webhooks, pinning data | Sending transactions (calls the chain module) |
-| `apps/web` (B) | Merchant dashboard, buyer page (PASS/FAIL, sign, cancel), public verify page, merchant setup page | Hashing logic (uses invoice-lib) |
-| `sdk/` + `examples/merchant-demo` (B) | ~20-line merchant integration and the separate demo app | Chain logic |
+| `contracts/` | Verifies merchant signature, pulls via `receiveWithAuthorization`, pays only the signed payout, settles once, capped refund | Anything off-chain; domain checks |
+| `packages/invoice-lib/` | Single definition of the invoice type, hash and signing; domain-file fetch/verify logic; PASS/FAIL result type | Network calls to our server; UI |
+| `apps/server/src/chain` | Simulate and send txs, due-date scheduler, health checks, WBT budget, rate limit | HTTP routes, storage schema |
+| `apps/server/src/api` | REST endpoints, invoice store, server-side domain-file fetch (CORS), CSV export, webhooks, pinning data | Sending transactions (calls the chain module) |
+| `apps/web` | Merchant dashboard, buyer page (PASS/FAIL, sign, cancel), public verify page, merchant setup page | Hashing logic (uses invoice-lib) |
+| `sdk/` + `examples/merchant-demo` | ~20-line merchant integration and the separate demo app | Chain logic |
 
 ## Where data lives
 - **On chain:** payment record keyed by invoice hash, payer, payout, amount, refunded; events `InvoicePaid`, `Refunded`.

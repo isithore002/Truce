@@ -3,8 +3,8 @@
 ## Read in this order (new session or new teammate)
 1. `../CLAUDE.md`: rules, verified facts, commands, status checklist
 2. `SPEC.md`: **frozen scope (top block)**, design, tests, plan, booth feedback
-3. `INTERFACES.md`: the contract between Dev A and Dev B
-4. `ARCHITECTURE.md` and `WORKFLOW.md`: pieces, ownership, branches, checkpoints
+3. `INTERFACES.md`: invoice type, API and module interfaces (keep both sides in sync)
+4. `ARCHITECTURE.md` and `WORKFLOW.md`: pieces, solo plan, cut gates, checkpoints
 5. `PITCH.md`: opening, demo storyline, judge Q&A, claims to avoid
 
 ## Why we decided what we decided
