@@ -13,6 +13,7 @@ Invoices a buyer can verify before paying, collected on the due date, paid gasle
 
 - `InvoiceSettler` (verified): [0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7](https://explorer.testnet.whitechain.io/address/0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7). Record: [deployments/whitechain-sepolia.json](deployments/whitechain-sepolia.json).
 - One real settlement in the track USDT (0.01 USDT, example invoice, gas paid by the relayer in WBT): [transaction](https://explorer.testnet.whitechain.io/tx/0xed25b41a14fa7395caf5af91d32dc355c97b59975feecad5e0caea80a7c088fb). The buyer's USDT went to the contract and straight out to the payout wallet the merchant signed; the transaction shows `AuthorizationUsed` and `InvoicePaid`.
+- The same payment driven through the HTTP API (create, verify, a swapped-payout copy refused, buyer pays with one signature, status, CSV): [transaction](https://explorer.testnet.whitechain.io/tx/0xfdb964abb82b740afbe1983d8e7780c968df292b832d48bd60a14d40d5d7d1c7). Run `CHAIN_MODE=testnet DEMO_DOMAINS=1 npm run server`, then `npm run e2e:api`.
 - The same buyer authorization with a swapped payout wallet is rejected by the contract (`BadMerchantSignature`). Reproduce both with `npm run e2e` (needs your own throwaway testnet keys, see `.env.example`).
 
 Status: see the checklist in [CLAUDE.md](CLAUDE.md). Testnet only, example data only, no real users.
