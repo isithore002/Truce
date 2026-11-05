@@ -1,0 +1,15 @@
+{
+  "name": "truce-gate1",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Gate 1: prove a signed EIP-3009 authorization can be redeemed on the Whitechain Sepolia USDT",
+  "scripts": {
+    "gate": "node gate1.mjs",
+    "gate:live": "node --env-file=.env gate1.mjs",
+    "gate:live:cancel": "node --env-file=.env gate1.mjs --cancel"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  }
+}
