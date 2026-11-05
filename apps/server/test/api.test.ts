@@ -1,25 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toWire, type InvoiceDoc } from "@truce/invoice-lib";
-import { buildApp } from "../src/api/app.js";
-import { MockChain } from "../src/chain/mock.js";
-import { JsonStore } from "../src/shared/store.js";
-import { ATTACKER_PAYOUT, DOMAIN, PAYOUT, SETTLER, T0, attacker, merchant, makeDoc } from "./helpers.js";
-
-export const domainFile = {
-  version: 1,
-  name: "Northlight Design Studio",
-  signingAddress: merchant.address,
-  payoutAddresses: [PAYOUT],
-  chainIds: [1874],
-};
-
-export function setup(opts: { latencyMs?: number } = {}) {
-  let t = Number(T0);
-  const chain = new MockChain({ settler: SETTLER, now: () => BigInt(t), latencyMs: opts.latencyMs });
-  const store = new JsonStore(undefined, () => t);
-  const app = buildApp({ chain, store, resolveDomain: async (d) => (d === DOMAIN ? domainFile : null), now: () => t, exampleMode: true });
-  return { app, chain, store, set: (v: number) => (t = v), advance: (s: number) => (t += s) };
-}
+import { setup } from "./appSetup.js";
+import { ATTACKER_PAYOUT, DOMAIN, SETTLER, T0, attacker, merchant, makeDoc } from "./helpers.js";
 
 const post = (app: ReturnType<typeof setup>["app"], doc: InvoiceDoc) => app.inject({ method: "POST", url: "/api/invoices", payload: toWire(doc) });
 

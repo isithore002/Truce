@@ -1,10 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import type { Address } from "viem";
-import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire } from "@truce/invoice-lib";
+import type { Address, Hex } from "viem";
+import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc } from "@truce/invoice-lib";
+import { RateLimiter } from "../chain/limits.js";
 import type { InvoiceRecord, InvoiceStatus } from "../shared/store.js";
 import type { AppContext } from "./app.js";
 import { ApiError } from "./errors.js";
-import { AddressParam, HashParam } from "./schemas.js";
+import { AddressParam, HashParam, VerifyQuery } from "./schemas.js";
 
 /** An unpaid invoice past its expiry reads as EXPIRED (computed on read, nothing is rewritten). */
 export function effectiveStatus(rec: InvoiceRecord, now: number): InvoiceStatus {
@@ -33,6 +34,8 @@ export function summarize(rec: InvoiceRecord, now: number) {
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
   const { chain, store } = ctx;
+  // Verifying makes the server fetch a merchant domain, so it is rate limited per caller.
+  const verifyLimiter = new RateLimiter(60, 60_000);
 
   app.get("/api/config", async () => ({ ...chain.config, exampleMode: ctx.exampleMode }));
 
@@ -82,6 +85,52 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
       schedule: rec.auth && rec.auth.mode === "due" ? { validAfter: rec.auth.validAfter, validBefore: rec.auth.validBefore } : undefined,
       events: rec.events,
     };
+  });
+
+  /** The ten checks plus the on-chain status. A document that fails the checks is a normal 200 with result FAIL. */
+  async function runVerify(rawDoc: unknown, buyer: string | undefined) {
+    const out = await verifyInvoiceDoc(rawDoc, {
+      chainId: chain.config.chainId,
+      settler: chain.config.settler,
+      allowedTokens: chain.config.tokens,
+      now: BigInt(ctx.now()),
+      resolveDomain: ctx.resolveDomain,
+      buyer: buyer as Address | undefined,
+    });
+    let onchain: { paid: boolean; payer?: Address; refunded?: string; txHash?: string; unavailable?: boolean } = { paid: false };
+    if (out.invoiceHash) {
+      try {
+        const st = await chain.onchainStatus(out.invoiceHash);
+        onchain = { paid: st.paid, payer: st.payer, refunded: st.refunded.toString(), txHash: st.txHash };
+      } catch {
+        onchain = { paid: false, unavailable: true };
+      }
+    }
+    return { result: out.result, checks: out.checks, invoiceHash: out.invoiceHash, domainFile: out.domainFile, onchain };
+  }
+
+  app.get("/api/verify", async (req) => {
+    verifyLimiter.check(req.ip);
+    const q = VerifyQuery.parse(req.query);
+    if (!q.hash) throw new ApiError("INVALID_DOCUMENT", "Provide ?hash=, or POST the invoice document.");
+    const rec = await store.get(q.hash.toLowerCase() as Hex);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    const result = await runVerify(rec.doc, q.buyer);
+    // If someone paid straight on chain, bring our record in line.
+    if (result.onchain.paid && rec.status !== "PAID") {
+      await store.update(rec.hash, (r) => {
+        r.status = "PAID";
+        r.payment = { payer: result.onchain.payer as Address, paidAt: ctx.now(), txHash: result.onchain.txHash as Hex | undefined };
+        r.events.push({ at: ctx.now(), type: "paid_onchain", txHash: result.onchain.txHash as Hex | undefined });
+      });
+    }
+    return result;
+  });
+
+  app.post("/api/verify", async (req) => {
+    verifyLimiter.check(req.ip);
+    const q = VerifyQuery.parse(req.query);
+    return runVerify(req.body, q.buyer);
   });
 
   app.get("/api/merchants/:address/invoices", async (req) => {
