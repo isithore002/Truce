@@ -1,0 +1,153 @@
+{
+  "note": "Golden vectors. Signed with the public Anvil account 0 key. Regenerate whenever the Invoice type changes (docs/INTERFACES.md section 9).",
+  "vectors": [
+    {
+      "name": "normal",
+      "chainId": 1874,
+      "verifyingContract": "0x0000000000000000000000000000000000001234",
+      "domain": "northlight-design.example",
+      "details": {
+        "merchantName": "Northlight Design Studio",
+        "clientName": "Beta Labs",
+        "lineItems": [
+          {
+            "description": "Brand identity",
+            "quantity": "1",
+            "unitPrice": "1250000000"
+          }
+        ],
+        "notes": "Net 30",
+        "example": true
+      },
+      "invoice": {
+        "invoiceId": "0x000000000000000000000000000000000102030405060708090a0b0c0d0e0f10",
+        "merchant": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "payout": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "token": "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+        "amount": "1250000000",
+        "dueDate": "1767225600",
+        "expiry": "1767484800",
+        "payer": "0x0000000000000000000000000000000000000000",
+        "domainHash": "0x22250d371726e246f8f88f7a2e4d8fa27af5ae17ade948520b394f6f2ef6056f",
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91"
+      },
+      "expected": {
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91",
+        "invoiceHash": "0xc6ad67b39803c38e45f77c41b8487712f029c0e4c479389669e03c1964fa6528"
+      },
+      "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "signature": "0x5a242595dc6065681015ebdf1b16196a3b8caf76d2dfa0fd5b38beadb1d3b1ad265577273c16953e8b805cf612e79a9df5f6af59af7506613017ee32243f4c931b"
+    },
+    {
+      "name": "payer-locked",
+      "chainId": 1874,
+      "verifyingContract": "0x0000000000000000000000000000000000001234",
+      "domain": "northlight-design.example",
+      "details": {
+        "merchantName": "Northlight Design Studio",
+        "clientName": "Beta Labs",
+        "lineItems": [
+          {
+            "description": "Brand identity",
+            "quantity": "1",
+            "unitPrice": "1250000000"
+          }
+        ],
+        "notes": "Net 30",
+        "example": true
+      },
+      "invoice": {
+        "invoiceId": "0x000000000000000000000000000000001112131415161718191a1b1c1d1e1f20",
+        "merchant": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "payout": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "token": "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+        "amount": "1250000000",
+        "dueDate": "1767225600",
+        "expiry": "1767484800",
+        "payer": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "domainHash": "0x22250d371726e246f8f88f7a2e4d8fa27af5ae17ade948520b394f6f2ef6056f",
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91"
+      },
+      "expected": {
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91",
+        "invoiceHash": "0x5d5cad9ea7b9d9d0aa7acb5af2ee7b0adc2e167e9291599e7c6bdb91b5b4ac89"
+      },
+      "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "signature": "0x6e95a6e2ddb84b1ce73925d400f6aa4a71e6bc6ce5f97967d7e5106f8109c34e521e198b97eff0f890660e81187666ee076297040ddd7c7cb09ee8e68f919dfb1c"
+    },
+    {
+      "name": "zero-dueDate",
+      "chainId": 1874,
+      "verifyingContract": "0x0000000000000000000000000000000000001234",
+      "domain": "northlight-design.example",
+      "details": {
+        "merchantName": "Northlight Design Studio",
+        "clientName": "Beta Labs",
+        "lineItems": [
+          {
+            "description": "Brand identity",
+            "quantity": "1",
+            "unitPrice": "1250000000"
+          }
+        ],
+        "notes": "Net 30",
+        "example": true
+      },
+      "invoice": {
+        "invoiceId": "0x000000000000000000000000000000002122232425262728292a2b2c2d2e2f30",
+        "merchant": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "payout": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "token": "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+        "amount": "10000",
+        "dueDate": "0",
+        "expiry": "1767484800",
+        "payer": "0x0000000000000000000000000000000000000000",
+        "domainHash": "0x22250d371726e246f8f88f7a2e4d8fa27af5ae17ade948520b394f6f2ef6056f",
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91"
+      },
+      "expected": {
+        "memoHash": "0x2e4685b66feab1e1379fa0595f16f0c1a3d77786b5ec0fa4abcd17c7658eea91",
+        "invoiceHash": "0x00fe607ea6a3253e0232cefca7005ab39fdcaee05673f2d4d2afac313ef9bc85"
+      },
+      "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "signature": "0x8cd5ba4298972a2fb8323d6e8a93438cd8383ed76190d18b462083f147f90f29329517041edf230b0cb35e0e28a0694c384970ac61d29d177704d4524d63eff91c"
+    },
+    {
+      "name": "unicode-memo",
+      "chainId": 1874,
+      "verifyingContract": "0x0000000000000000000000000000000000001234",
+      "domain": "Nordlicht-Gestaltung.example",
+      "details": {
+        "merchantName": "Nordlicht Gestaltung – Café ☕",
+        "clientName": "Étoile Labs ₹",
+        "lineItems": [
+          {
+            "description": "Brand identity",
+            "quantity": "1",
+            "unitPrice": "1250000000"
+          }
+        ],
+        "notes": "Zahlbar in 30 Tagen 🚀 “net 30”",
+        "example": true
+      },
+      "invoice": {
+        "invoiceId": "0x000000000000000000000000000000003132333435363738393a3b3c3d3e3f40",
+        "merchant": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "payout": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "token": "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+        "amount": "1250000000",
+        "dueDate": "1767225600",
+        "expiry": "1767484800",
+        "payer": "0x0000000000000000000000000000000000000000",
+        "domainHash": "0x100727ebe8be3eda2f4d0ba72cf1f874e4fdc3b3ca568bf4da0fff0fca26876f",
+        "memoHash": "0x3091d676ab3c7864976ad8989d84b25ccfd5533a4b56b2dac97642a7aa00b54f"
+      },
+      "expected": {
+        "memoHash": "0x3091d676ab3c7864976ad8989d84b25ccfd5533a4b56b2dac97642a7aa00b54f",
+        "invoiceHash": "0x17cf82e0e2efc6d9cc9f22e6e27b20e6abe9fb20f30570eb399eaf644c01f452"
+      },
+      "signer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "signature": "0x3e64db916dcefc8dcc8f3cf58037ec80afc2566c4a2cb253b9db2ef5172e13874a0d65b2edca4ff6dd88245343fa07ed10a06a8c57b7ecce08b6eb6630b75e131c"
+    }
+  ]
+}

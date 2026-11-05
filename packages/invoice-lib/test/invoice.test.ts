@@ -1,3 +1,4 @@
+import vectorFile from "../test-vectors/invoice-vectors.json";
 import { concat, encodeAbiParameters, keccak256, pad, parseAbiParameters, stringToHex, toHex, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
@@ -159,4 +160,63 @@ describe("signInvoice and recoverMerchant", () => {
       await recoverMerchant(baseInvoice, sig, { ...ctx, verifyingContract: "0x0000000000000000000000000000000000005678" }),
     ).not.toBe(merchantAccount.address);
   });
+});
+
+interface Vector {
+  name: string;
+  chainId: number;
+  verifyingContract: Address;
+  domain: string;
+  details: InvoiceDetails;
+  invoice: Record<keyof Invoice, string>;
+  expected: { memoHash: Hex; invoiceHash: Hex };
+  signer: Address;
+  signature: Hex;
+}
+
+const vectors = vectorFile.vectors as unknown as Vector[];
+
+function toInvoice(v: Vector): Invoice {
+  const i = v.invoice;
+  return {
+    invoiceId: i.invoiceId as Hex,
+    merchant: i.merchant as Address,
+    payout: i.payout as Address,
+    token: i.token as Address,
+    amount: BigInt(i.amount),
+    dueDate: BigInt(i.dueDate),
+    expiry: BigInt(i.expiry),
+    payer: i.payer as Address,
+    domainHash: i.domainHash as Hex,
+    memoHash: i.memoHash as Hex,
+  };
+}
+
+describe("golden vectors (shared with the Foundry tests)", () => {
+  it("covers the required cases", () => {
+    expect(vectors.map((v) => v.name)).toEqual(["normal", "payer-locked", "zero-dueDate", "unicode-memo"]);
+  });
+
+  for (const v of vectors) {
+    describe(v.name, () => {
+      const inv = toInvoice(v);
+      const c: SigningContext = { chainId: v.chainId, verifyingContract: v.verifyingContract };
+
+      it("reproduces memoHash and domainHash", () => {
+        expect(memoHash(v.details)).toBe(v.expected.memoHash);
+        expect(inv.memoHash).toBe(v.expected.memoHash);
+        expect(domainHash(v.domain)).toBe(inv.domainHash);
+      });
+
+      it("reproduces invoiceHash (library and hand-rolled encoding)", () => {
+        expect(invoiceHash(inv, c)).toBe(v.expected.invoiceHash);
+        expect(manualDigest(inv, c)).toBe(v.expected.invoiceHash);
+      });
+
+      it("recovers the published signer from the stored signature", async () => {
+        expect(await recoverMerchant(inv, v.signature, c)).toBe(v.signer);
+        expect(v.signer).toBe(inv.merchant);
+      });
+    });
+  }
 });
