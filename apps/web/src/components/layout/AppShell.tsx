@@ -9,10 +9,11 @@ import { NetworkBadge } from './NetworkBadge';
 import { ScenarioBar } from './ScenarioBar';
 import { WalletButton } from './WalletButton';
 
+// In the order a merchant meets them: set up the domain, then invoice, then check.
 const LINKS = [
-  { to: '/verify', label: 'Verify' },
-  { to: '/merchant', label: 'Invoices' },
   { to: '/setup', label: 'Setup' },
+  { to: '/merchant', label: 'Invoices' },
+  { to: '/verify', label: 'Verify' },
   ...(config.demoTools ? [{ to: '/demo', label: 'Demo' }] : []),
 ];
 
