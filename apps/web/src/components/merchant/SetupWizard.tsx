@@ -121,8 +121,7 @@ export function SetupWizard() {
             <p className="small muted">Connect a wallet and fill in the fields above to generate the file.</p>
           ) : (
             <>
-              <p className="small">Upload this file so it opens at <code>https://{domain}/.well-known/truce.json</code>.</p>
-              <pre className="codeblock" aria-label="truce.json contents">{json}</pre>
+              <p className="small">This small file lets buyers check your invoices. Truce made it for you: put it on your website so it opens at <code>https://{domain}/.well-known/truce.json</code>.</p>
               <div className="btn-row">
                 <button type="button" className="btn btn--secondary" onClick={() => downloadBlob(new Blob([json + '\n'], { type: 'application/json' }), 'truce.json')}>
                   <Icon name="download" size={18} />Download truce.json
@@ -131,14 +130,18 @@ export function SetupWizard() {
                   <Icon name="copy" size={18} />Copy contents
                 </button>
               </div>
-              <ul className="small stack stack--sm" style={{ paddingLeft: 18, margin: 0 }}>
-                <li>Put the file in a folder named <code>.well-known</code> at the root of your site.</li>
-                <li>Serve it over HTTPS with <code>Content-Type: application/json</code>, at exactly that address (a redirect, for example from <code>www</code>, is not followed).</li>
-                <li>Changing a wallet later is fine, but buyers who paid before will see a warning.</li>
-                {domain.endsWith('.example') && (
-                  <li>Names ending in <code>.example</code> are fictional demo domains and cannot be published on the internet. A demo server answers for them from its own example list.</li>
-                )}
-              </ul>
+              <details className="tech-details">
+                <summary>Show the file and hosting notes</summary>
+                <pre className="codeblock" aria-label="truce.json contents">{json}</pre>
+                <ul className="small stack stack--sm" style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Put the file in a folder named <code>.well-known</code> at the root of your site.</li>
+                  <li>Serve it over HTTPS with <code>Content-Type: application/json</code>, at exactly that address (a redirect, for example from <code>www</code>, is not followed).</li>
+                  <li>Changing a wallet later is fine, but buyers who paid before will see a warning.</li>
+                  {domain.endsWith('.example') && (
+                    <li>Names ending in <code>.example</code> are fictional demo domains and cannot be published on the internet. A demo server answers for them from its own example list.</li>
+                  )}
+                </ul>
+              </details>
               <div className="btn-row">
                 <button type="button" className="btn btn--primary" onClick={() => void runCheck()} disabled={checking} data-testid="check-domain">
                   <Icon name="check" size={18} />{checking ? 'Checking…' : 'Check my domain'}

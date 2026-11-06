@@ -254,3 +254,9 @@
 .pay-mode__opt small { display: block; color: var(--p-muted); font-size: var(--t-label); line-height: 1.5; margin-top: 2px; }
 .pay-mode:disabled .pay-mode__opt { cursor: not-allowed; opacity: .6; }
 .btn svg { flex: none; }
+
+/* technical details, collapsed by default */
+.tech-details { margin-top: var(--s-3); border-top: 1px solid var(--p-line); padding-top: var(--s-3); }
+.tech-details > summary { cursor: pointer; color: var(--p-muted); font-size: var(--t-small); width: fit-content; }
+.tech-details > summary:hover, .tech-details > summary:focus-visible { color: var(--p-ink, inherit); }
+.tech-details[open] > summary { margin-bottom: var(--s-3); }

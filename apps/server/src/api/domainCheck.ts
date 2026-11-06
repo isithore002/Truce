@@ -54,7 +54,7 @@ export function evaluateDomainFile(fetched: FetchResult, input: { domain: string
       domain,
       demo,
       listed,
-      message: `Found ${where}, but it lists a different signing wallet (${short(file.signingAddress)}) than the wallet you connected (${short(signer)}). Publish the file shown above, or connect the listed wallet.`,
+      message: `Found ${where}, but it lists a different signing wallet (${short(file.signingAddress)}) than the wallet you connected (${short(signer)}). Publish the file from this page (Download or Copy), or connect the listed wallet.`,
     };
   }
   if (!file.payoutAddresses.some((a) => same(a, payout))) {
@@ -63,11 +63,11 @@ export function evaluateDomainFile(fetched: FetchResult, input: { domain: string
       domain,
       demo,
       listed,
-      message: `Found ${where}, but your payout wallet ${short(payout)} is not in its list of payout wallets. Publish the file shown above.`,
+      message: `Found ${where}, but your payout wallet ${short(payout)} is not in its list of payout wallets. Publish the file from this page (Download or Copy).`,
     };
   }
   if (!file.chainIds.includes(chainId)) {
-    return { status: "CHAIN_NOT_LISTED", domain, demo, listed, message: `Found ${where}, but it does not list this network (chain ${chainId}). Publish the file shown above.` };
+    return { status: "CHAIN_NOT_LISTED", domain, demo, listed, message: `Found ${where}, but it does not list this network (chain ${chainId}). Publish the file from this page (Download or Copy).` };
   }
   return {
     status: "OK",

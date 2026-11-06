@@ -66,9 +66,16 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
               <dd>{details.notes}</dd>
             </>
           )}
-          <dt>Invoice id</dt>
-          <dd><AddressChip value={inv.invoiceId} kind="hash" explorer={false} /></dd>
         </dl>
+
+        <details className="tech-details">
+          <summary>Technical details</summary>
+          <dl className="kv">
+            <dt>Invoice id</dt>
+            <dd><AddressChip value={inv.invoiceId} kind="hash" explorer={false} /></dd>
+          </dl>
+          <p className="small muted">The invoice id is a number the merchant chose. It is not the invoice hash used in payment links and on the Verify page.</p>
+        </details>
 
         <div data-field="lines"><LineItems items={details.lineItems} signedAmount={inv.amount} /></div>
       </div>

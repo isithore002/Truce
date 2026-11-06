@@ -10,7 +10,7 @@ export function ExampleBanner() {
       <div className="wrap">
         <Icon name="info" size={16} />
         <span>
-          <strong>EXAMPLE DATA.</strong> Northlight Design Studio, Beta Labs and every <code>.example</code> domain are fictional. Testnet only.
+          <strong>EXAMPLE DATA.</strong> The merchants and clients shown here are fictional. Testnet only.
         </span>
       </div>
     </div>

@@ -8,12 +8,11 @@ import { Icon } from '../Icon';
 export function MockModeBanner({ mode = config.apiMode }: { mode?: 'mock' | 'server' }) {
   if (mode !== 'mock') return null;
   return (
-    <div className="mock-band" role="alert" data-testid="mock-mode-banner">
+    <div className="mock-band" role="alert" data-testid="mock-mode-banner" title="For real testnet transactions, run the server and start the app with VITE_API_MODE=server (see the README).">
       <div className="wrap">
         <Icon name="alert" size={16} />
         <span>
-          <strong>DEMO MODE: nothing here is on the blockchain.</strong> There is no server and no chain, so payments are simulated and make no transaction.
-          For real testnet transactions, run the server and start the app with <code>VITE_API_MODE=server</code> (see the README).
+          <strong>DEMO MODE.</strong> Payments here are simulated and nothing is on the blockchain.
         </span>
       </div>
     </div>
