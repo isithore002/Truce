@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHECK_IDS, ERROR_CODES, HEALTH_REASONS, OVERLAYS, STATUSES } from '../lib/api/types';
-import { checkMessage, CHECK_MESSAGES, ERROR_MESSAGES, errorMessage, HEALTH_MESSAGES, OVERLAY_BADGES, STATUS_BADGES } from '../lib/messages';
+import { checkMessage, checkMessageIn, CHECK_MESSAGES, ERROR_MESSAGES, errorMessage, HEALTH_MESSAGES, OVERLAY_BADGES, STATUS_BADGES } from '../lib/messages';
 
 const JARGON = /_|\bnonce\b|\bhash\b|\bEIP\b|\bmemo\b/i;
 
@@ -47,5 +47,32 @@ describe('event labels', () => {
       expect(EVENT_LABELS[t]?.label, t).toBeTruthy();
     }
     expect(eventLabel('something_new').label).toBe('Something new');
+  });
+});
+
+describe('checkMessageIn (when the domain file cannot be read)', () => {
+  const all = (over: Record<string, boolean>) => CHECK_IDS.map((id) => ({ id, ok: over[id] ?? true }));
+  const ctx = { domain: 'acme.com' };
+
+  it('says the two comparison checks were not run, and keeps them as failures', () => {
+    const checks = all({ domain_file_reachable: false, merchant_matches_domain_file: false, payout_in_domain_file: false });
+    for (const id of ['merchant_matches_domain_file', 'payout_in_domain_file'] as const) {
+      const m = checkMessageIn(checks, id, ctx);
+      expect(m.text).toMatch(/^Not checked, because the domain file could not be read/);
+      expect(m.text).toContain('do not pay');
+      expect(m.title).toBe(CHECK_MESSAGES[id].title);
+    }
+    // the file check itself keeps its own message
+    expect(checkMessageIn(checks, 'domain_file_reachable', ctx).text).toBe('We could not read the wallet list at acme.com/.well-known/truce.json.');
+  });
+
+  it('keeps the specific wording when the file was read and the wallet really is not listed', () => {
+    const checks = all({ payout_in_domain_file: false });
+    expect(checkMessageIn(checks, 'payout_in_domain_file', ctx).text).toBe('The payout wallet is not listed on acme.com. Do not pay this invoice.');
+  });
+
+  it('does not change passing checks, even next to an unreadable file', () => {
+    const checks = all({ domain_file_reachable: false, merchant_matches_domain_file: false, payout_in_domain_file: false });
+    expect(checkMessageIn(checks, 'signature_valid', ctx).text).toBe(CHECK_MESSAGES.signature_valid.ok(ctx));
   });
 });

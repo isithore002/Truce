@@ -1,6 +1,6 @@
 import type { Check } from '../../lib/api/types';
 import { CHECK_IDS } from '../../lib/api/types';
-import { checkMessage } from '../../lib/messages';
+import { checkMessageIn } from '../../lib/messages';
 import { Icon } from '../Icon';
 import { useEffect } from 'react';
 
@@ -40,7 +40,7 @@ export function VerificationChecklist({ checks, domain, loading }: { checks?: Ch
       </div>
       <ul className="checklist">
         {sorted.map((c, i) => {
-          const m = checkMessage(c.id, c.ok, { domain });
+          const m = checkMessageIn(checks, c.id, { domain });
           return (
             <li key={c.id} data-ok={c.ok} data-check={c.id} style={{ ['--i' as string]: i }} tabIndex={FIELD[c.id] ? 0 : undefined}
               onMouseEnter={() => highlight(FIELD[c.id])} onMouseLeave={() => highlight()} onFocus={() => highlight(FIELD[c.id])} onBlur={() => highlight()}>

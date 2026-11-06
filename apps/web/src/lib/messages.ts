@@ -67,6 +67,24 @@ export function checkMessage(id: CheckId, ok: boolean, ctx: CheckContext): { tit
   return { title: copy.title, text: ok ? copy.ok(ctx) : copy.fail(ctx) };
 }
 
+/** Checks that compare the invoice with the domain's wallet list. They cannot run when the list could not be read. */
+const NEEDS_DOMAIN_FILE: CheckId[] = ['merchant_matches_domain_file', 'payout_in_domain_file'];
+
+/**
+ * The text for one check in the context of all of them. When the domain file could not be read, the comparison checks
+ * were never run, so they say so instead of claiming the wallet is "not listed". They still count as FAIL: the buyer
+ * must not be told an unconfirmed payee is fine.
+ */
+export function checkMessageIn(checks: { id: CheckId; ok: boolean }[], id: CheckId, ctx: CheckContext): { title: string; text: string } {
+  const own = checks.find((c) => c.id === id);
+  const fileUnreadable = checks.some((c) => c.id === 'domain_file_reachable' && !c.ok);
+  const m = checkMessage(id, own?.ok ?? false, ctx);
+  if (own && !own.ok && fileUnreadable && NEEDS_DOMAIN_FILE.includes(id)) {
+    return { title: m.title, text: 'Not checked, because the domain file could not be read. The payee cannot be confirmed, so do not pay.' };
+  }
+  return m;
+}
+
 export type Tone = 'ok' | 'bad' | 'warn' | 'info' | 'neutral';
 
 export const STATUS_BADGES: Record<Status, { label: string; tone: Tone; text: string }> = {
