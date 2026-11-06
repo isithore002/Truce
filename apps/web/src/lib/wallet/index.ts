@@ -35,7 +35,11 @@ export interface DiscoveredWallet {
   provider: Eip1193;
 }
 
-let selected: Eip1193 | undefined;
+// The chosen wallet lives on window so a hot reload of this module (dev server) does not silently fall back to
+// window.ethereum, which may be a different extension than the one the user connected with.
+type Holder = { __truceWallet?: Eip1193 };
+const holder: Holder = typeof window !== 'undefined' ? (window as unknown as Holder) : {};
+let selected: Eip1193 | undefined = holder.__truceWallet;
 const currentProvider = (): Eip1193 | undefined => selected ?? (typeof window !== 'undefined' ? window.ethereum : undefined);
 export const hasInjectedWallet = () => !!currentProvider();
 
@@ -73,6 +77,7 @@ export function selectProvider(p?: Eip1193) {
   if (p === selected) return;
   if (changeListeners.size) detach(currentProvider());
   selected = p;
+  holder.__truceWallet = p;
   client = undefined;
   if (changeListeners.size) attach(currentProvider());
 }
@@ -156,9 +161,22 @@ export async function signTypedData(account: Address, typedData: TypedDataDefini
     return `${randomHex(64)}1b` as Hex;
   }
   try {
-    // Ask only for the account the wallet has authorised; a stale one makes the wallet answer 4100.
-    const authorised = await wallet().getAddresses();
-    if (!authorised.some((a) => a.toLowerCase() === account.toLowerCase())) throw new WalletError('UNAUTHORIZED', UNAUTHORIZED_MSG);
+    // Ask only for an account the wallet has authorised; a stale one makes the wallet answer 4100.
+    // eth_accounts is empty while the wallet is locked, so ask once (unlock / reconnect prompt) before giving up.
+    const has = (list: readonly Address[]) => list.some((a) => a.toLowerCase() === account.toLowerCase());
+    let authorised = await wallet().getAddresses();
+    if (!has(authorised)) {
+      authorised = await wallet().requestAddresses();
+      if (!has(authorised)) {
+        const active = authorised[0];
+        throw new WalletError(
+          'UNAUTHORIZED',
+          active
+            ? `Your wallet's active account is ${active.slice(0, 6)}…${active.slice(-4)}, but Truce is connected as ${account.slice(0, 6)}…${account.slice(-4)}. Select ${account.slice(0, 6)}…${account.slice(-4)} in your wallet, or disconnect and connect again with the account you want.`
+            : UNAUTHORIZED_MSG,
+        );
+      }
+    }
     return await wallet().signTypedData({ account, ...typedData } as Parameters<WalletClient['signTypedData']>[0]);
   } catch (e) {
     throw mapError(e);
