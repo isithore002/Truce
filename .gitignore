@@ -22,3 +22,5 @@ gate/gate1-result.json
 Thumbs.db
 .vscode/
 .docs/
+# test runner cache
+.vitest/
