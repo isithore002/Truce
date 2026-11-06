@@ -7,6 +7,7 @@ import { ApiError } from "./errors.js";
 import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
+import { ledgerEntries, ledgerToCsv } from "./ledger.js";
 import { AddressParam, AuthorizeBody, CancelBody, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
 import { effectiveStatus, summarize } from "./status.js";
 
@@ -125,6 +126,16 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply
       .header("content-type", "text/csv; charset=utf-8")
       .header("content-disposition", `attachment; filename="truce-invoices-${address.slice(2, 10).toLowerCase()}.csv"`)
+      .send(csv);
+  });
+
+  // The same invoices as a journal: one row per money movement (issued, payment, refund), each payment and refund with its transaction.
+  app.get("/api/merchants/:address/ledger.csv", async (req, reply) => {
+    const { address } = AddressParam.parse(req.params);
+    const csv = ledgerToCsv(ledgerEntries(await store.listByMerchant(address)), { explorerBase: chain.config.explorerBase });
+    return reply
+      .header("content-type", "text/csv; charset=utf-8")
+      .header("content-disposition", `attachment; filename="truce-ledger-${address.slice(2, 10).toLowerCase()}.csv"`)
       .send(csv);
   });
 

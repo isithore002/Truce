@@ -174,3 +174,31 @@ describe("the accountant CSV after refunds", () => {
     expect(row).toMatchObject({ refunded: "1250", net_received: "0" });
   });
 });
+
+describe("GET /api/merchants/:address/ledger.csv after a real pay and refund", () => {
+  it("lists issued, payment and refund with their transactions, and balances", async () => {
+    const env = setup();
+    const { hash, doc } = await paidInvoice(env);
+    const refunded = await post(env, hash, await signRefund(hash, 300_000_000n, 0n));
+    expect(refunded.statusCode).toBe(200);
+
+    const res = await env.app.inject({ method: "GET", url: `/api/merchants/${doc.invoice.merchant}/ledger.csv` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/csv; charset=utf-8");
+    expect(res.headers["content-disposition"]).toMatch(/^attachment; filename="truce-ledger-[0-9a-f]{8}\.csv"$/);
+    const lines = res.body.replace(/^﻿/, "").trimEnd().split("\r\n");
+    expect(lines).toHaveLength(4);
+    const [issued, payment, refund] = lines.slice(1).map((l) => l.split(","));
+    expect(issued.slice(1, 7)).toEqual(["issued", doc.invoice.invoiceId, "Beta Labs", "Accounts receivable", "Sales revenue", "1250"]);
+    expect(payment.slice(1, 7)).toEqual(["payment", doc.invoice.invoiceId, "Beta Labs", "Cash (USDT)", "Accounts receivable", "1250"]);
+    expect(refund.slice(1, 7)).toEqual(["refund", doc.invoice.invoiceId, "Beta Labs", "Sales returns", "Cash (USDT)", "300"]);
+    expect(refund[8]).toContain(refunded.json().txHash);
+  });
+
+  it("is just the header for a merchant with no invoices", async () => {
+    const env = setup();
+    const res = await env.app.inject({ method: "GET", url: `/api/merchants/${attacker.address}/ledger.csv` });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.replace(/^﻿/, "").trim()).toBe("entry_date,entry_type,invoice_id,client_name,debit_account,credit_account,amount,currency,tx_link,evidence,memo,invoice_hash,example_data");
+  });
+});

@@ -21,6 +21,8 @@ export interface TruceApi {
   refund(hash: Hex, req: RefundRequest): Promise<RefundResult>;
   listMerchantInvoices(address: Address): Promise<InvoiceSummary[]>;
   exportCsv(address: Address): Promise<Blob>;
+  /** The same invoices as a journal: one row per money movement (issued, payment, refund). */
+  exportLedger(address: Address): Promise<Blob>;
   healthz(): Promise<Healthz>;
 }
 
@@ -92,5 +94,6 @@ export const httpApi: TruceApi = {
   listMerchantInvoices: async (address) =>
     (await request<{ items: ServerSummary[] }>(`/api/merchants/${address}/invoices`)).items.map(fromServer.summary),
   exportCsv: (address) => request<Blob>(`/api/merchants/${address}/export.csv`, {}, 'blob'),
+  exportLedger: (address) => request<Blob>(`/api/merchants/${address}/ledger.csv`, {}, 'blob'),
   healthz: async () => fromServer.healthz(await request<ServerHealthz>('/healthz')),
 };

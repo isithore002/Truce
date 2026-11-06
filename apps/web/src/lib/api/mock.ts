@@ -213,6 +213,27 @@ export const mockApi: TruceApi = {
       .map(toSummary);
   },
 
+  async exportLedger(address) {
+    await wait(200);
+    // Mock mode keeps no chain, so the journal comes from the stored records: issued, payment, and one refund line for the total refunded.
+    const rows: string[] = [];
+    for (const s of await mockApi.listMerchantInvoices(address)) {
+      const r = get(s.hash);
+      const amount = formatUsdt(s.amount, { fixed: true }).replace(/,/g, '');
+      const line = (date: string, type: string, debit: string, credit: string, value: string, tx: string, evidence: string, memo: string) =>
+        [date, type, s.invoiceId, s.clientName, debit, credit, value, 'USDT', tx, evidence, memo, s.hash, r.doc.details.example ? 'yes' : 'no'].map(csvCell).join(',');
+      rows.push(line(new Date(r.events[0]?.at ?? Date.now()).toISOString(), 'issued', 'Accounts receivable', 'Sales revenue', amount, '', 'signed invoice', 'Invoice issued and signed by the merchant'));
+      if (r.status === 'PAID' && r.tx) {
+        rows.push(line(r.tx.paidAt ?? '', 'payment', 'Cash (USDT)', 'Accounts receivable', amount, explorerTx(r.tx.txHash), 'on-chain transaction', 'Paid by the buyer (mock data)'));
+        const refunded = BigInt(r.refunded ?? '0');
+        const refundEvent = [...r.events].reverse().find((e) => e.type === 'refunded');
+        if (refunded > 0n) rows.push(line(refundEvent?.at ?? '', 'refund', 'Sales returns', 'Cash (USDT)', formatUsdt(refunded, { fixed: true }).replace(/,/g, ''), refundEvent?.txHash ? explorerTx(refundEvent.txHash) : '', 'on-chain transaction', 'Refund to the original payer (mock data)'));
+      }
+    }
+    const head = 'entry_date,entry_type,invoice_id,client_name,debit_account,credit_account,amount,currency,tx_link,evidence,memo,invoice_hash,example_data';
+    return new Blob([[head, ...rows].join('\n') + '\n'], { type: 'text/csv' });
+  },
+
   async exportCsv(address) {
     await wait(200);
     const rows = (await mockApi.listMerchantInvoices(address)).map((s) => {

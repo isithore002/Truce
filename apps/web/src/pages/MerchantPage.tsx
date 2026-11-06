@@ -180,6 +180,7 @@ export function MerchantPage() {
                 </button>
               )}
               <CsvButton address={address} disabled={!rows?.length} />
+              <CsvButton address={address} disabled={!rows?.length} kind="ledger" />
             </div>
           </div>
 

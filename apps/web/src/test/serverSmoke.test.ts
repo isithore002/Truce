@@ -184,6 +184,14 @@ describe.skipIf(!run)('web client against apps/server', () => {
     const rec = await httpApi.getInvoice(hash);
     expect(rec.events?.filter((e) => e.type === 'refunded').length).toBe(2);
     expect(rec.status).toBe('PAID');
+
+    // The ledger download the dashboard button uses: this invoice appears as issued, payment, refund, refund.
+    const ledger = (await (await httpApi.exportLedger(merchant.address)).text()).replace(/^﻿/, '').trimEnd().split('\r\n');
+    const mine = ledger.filter((l) => l.includes(doc.invoice.invoiceId));
+    expect(mine.map((l) => l.split(',')[1])).toEqual(['issued', 'payment', 'refund', 'refund']);
+    expect(mine[1]).toContain('Cash (USDT),Accounts receivable,0.01');
+    expect(mine[2]).toContain('Sales returns,Cash (USDT),0.004');
+    expect(mine[3]).toContain('Sales returns,Cash (USDT),0.006');
   });
 
   it('a monthly series makes separate, individually verifiable invoices with their own dates and notes', async () => {

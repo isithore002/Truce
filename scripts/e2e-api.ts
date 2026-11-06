@@ -140,6 +140,15 @@ async function main() {
   const tooMuch = await refundCall(AMOUNT, refundAmount); // more than what is left
   expect("a refund above what is left is refused", tooMuch.status === 422 && tooMuch.json?.error?.code === "REFUND_EXCEEDS_PAID", tooMuch.json?.error?.code ?? tooMuch.text);
 
+  // 7. The accountant files agree with the chain: the CSV shows the refund, and the ledger has a row for each money movement with its transaction
+  const csv2 = (await call("GET", `/api/merchants/${merchant.address}/export.csv`)).text.replace(/^﻿/, "").trim().split("\r\n");
+  const cols = csv2[0].split(",");
+  const mineCsv = csv2.find((l) => l.includes(hash))?.split(",") ?? [];
+  expect("the invoice CSV shows the refund and the net received", mineCsv[cols.indexOf("refunded")] === "0.002" && mineCsv[cols.indexOf("net_received")] === "0.008", `refunded ${mineCsv[cols.indexOf("refunded")]}, net ${mineCsv[cols.indexOf("net_received")]}`);
+  const ledger = (await call("GET", `/api/merchants/${merchant.address}/ledger.csv`)).text.replace(/^﻿/, "").trim().split("\r\n").filter((l) => l.includes(invoice.invoiceId));
+  const kinds = ledger.map((l) => l.split(",")[1]).join(" > ");
+  expect("the ledger has issued, payment and refund, each money entry with its transaction link", kinds === "issued > payment > refund" && ledger[1].includes(`/tx/${paid.json.txHash}`) && ledger[2].includes(`/tx/${refunded.json.txHash}`), kinds);
+
   console.log("\nOK: the API behaves end to end.");
 }
 
