@@ -9,14 +9,15 @@ import { config } from '../lib/config';
 import { docLinkPath } from '../lib/doclink';
 import { formatIso, formatUsdt, formatWbt, isHash } from '../lib/format';
 import { randomHex } from '../lib/invoiceLib';
+import { eventLabel } from '../lib/messages';
 
-type Tamper = { id: string; label: string; what: string; make: (d: InvoiceDoc) => InvoiceDoc };
+type Tamper = { id: string; label: string; what: string; fails: string; make: (d: InvoiceDoc) => InvoiceDoc };
 
 const TAMPERS: Tamper[] = [
-  { id: 'payout', label: 'Swapped payout', what: 'The payout wallet is replaced with an attacker wallet.', make: (d) => ({ ...d, invoice: { ...d.invoice, payout: ADDR.attackerPayout as Address } }) },
-  { id: 'amount', label: 'Tampered amount', what: 'The amount is multiplied by ten after signing.', make: (d) => ({ ...d, invoice: { ...d.invoice, amount: (BigInt(d.invoice.amount) * 10n).toString() } }) },
-  { id: 'signer', label: 'Wrong signer', what: 'An attacker signs with a wallet the domain does not list.', make: (d) => ({ ...d, invoice: { ...d.invoice, merchant: ADDR.otherSigner as Address }, signature: `${randomHex(64)}1b` as Hex }) },
-  { id: 'expired', label: 'Expired', what: 'The payment window is moved into the past.', make: (d) => ({ ...d, invoice: { ...d.invoice, expiry: String(Math.floor(Date.now() / 1000) - 86_400) } }) },
+  { id: 'payout', label: 'Swapped payout wallet', what: 'The payout wallet is replaced with an attacker wallet after the merchant signed.', fails: 'Signature, payout listed on the domain', make: (d) => ({ ...d, invoice: { ...d.invoice, payout: ADDR.attackerPayout as Address } }) },
+  { id: 'amount', label: 'Tampered amount', what: 'The amount is multiplied by ten after signing.', fails: 'Signature', make: (d) => ({ ...d, invoice: { ...d.invoice, amount: (BigInt(d.invoice.amount) * 10n).toString() } }) },
+  { id: 'signer', label: 'Wrong signer', what: 'An attacker signs with a wallet the domain does not list.', fails: 'Signature, signer listed on the domain', make: (d) => ({ ...d, invoice: { ...d.invoice, merchant: ADDR.otherSigner as Address }, signature: `${randomHex(64)}1b` as Hex }) },
+  { id: 'expired', label: 'Expired invoice', what: 'The payment window is moved into the past.', fails: 'Signature, not expired', make: (d) => ({ ...d, invoice: { ...d.invoice, expiry: String(Math.floor(Date.now() / 1000) - 86_400) } }) },
 ];
 
 /** Demo tools (VITE_DEMO_TOOLS=1): build tampered #doc links from a real invoice, and watch the relayer. */
@@ -58,64 +59,80 @@ export function DemoPage() {
         <p className="lead muted measure">Build a tampered copy of an honest invoice. Each copy travels inside the link, is checked without being stored, and never enables Pay.</p>
       </header>
 
-      <div className="split">
-        <section className="card stack" aria-labelledby="tamper-h">
-          <h2 id="tamper-h">Tampered copies</h2>
-          <form className="field" onSubmit={(e) => { e.preventDefault(); loadDoc(hash); }}>
-            <label htmlFor="demo-hash">Honest invoice hash</label>
-            <div className="row" style={{ flexWrap: 'nowrap' }}>
-              <input id="demo-hash" className="input input--mono grow" value={hash} onChange={(e) => setHash(e.target.value)} spellCheck={false} />
-              <button type="submit" className="btn btn--secondary" style={{ height: 48 }}>Load invoice</button>
-            </div>
-            {docError && <span className="field-error" role="alert">{docError}</span>}
-          </form>
-          {doc && (
-            <>
-              <p className="small">Base: {doc.details.merchantName} bills {doc.details.clientName} {formatUsdt(doc.invoice.amount)} USDT. <Link className="link" to={`/pay/${hash}`}>Open the honest link</Link></p>
-              <ul className="l-rows" style={{ margin: 0 }}>
-                {TAMPERS.map((t) => {
-                  const path = docLinkPath(t.make(doc));
-                  return (
-                    <li key={t.id} style={{ alignItems: 'center' }}>
-                      <span className="stack stack--sm" style={{ gap: 2 }}><strong style={{ fontWeight: 500 }}>{t.label}</strong><span className="small muted">{t.what}</span></span>
-                      <span className="row" style={{ justifyContent: 'flex-end' }}>
-                        <Link className="btn btn--primary" to={path}>Open {t.label.toLowerCase()} link</Link>
-                        <button type="button" className="icon-btn icon-btn--menu" aria-label={`Copy ${t.label} link`} onClick={() => void navigator.clipboard?.writeText(location.origin + path).then(() => toast('Link copied'))}><Icon name="copy" /></button>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
-        </section>
-
-        <section className="card stack" aria-labelledby="ops-h" aria-live="polite">
-          <div className="row row--between">
-            <h2 id="ops-h">Relayer status</h2>
-            <button type="button" className="btn btn--secondary" onClick={loadHealth}><Icon name="refresh" size={18} />Refresh status</button>
+      <form className="card demo-base" onSubmit={(e) => { e.preventDefault(); loadDoc(hash); }}>
+        <div className="field grow">
+          <label htmlFor="demo-hash">Honest invoice hash</label>
+          <input id="demo-hash" className="input input--mono" value={hash} onChange={(e) => setHash(e.target.value)} spellCheck={false} />
+          {docError && <span className="field-error" role="alert">{docError}</span>}
+        </div>
+        <button type="submit" className="btn btn--secondary">Load invoice</button>
+        {doc && (
+          <div className="demo-base__doc">
+            <span className="badge badge--ok"><Icon name="check" />Honest</span>
+            <span>{doc.details.merchantName} bills {doc.details.clientName} <strong>{formatUsdt(doc.invoice.amount)} USDT</strong></span>
+            <Link className="link small" to={`/pay/${hash}`}>Open the honest link</Link>
           </div>
-          {healthError && <p className="field-error" role="alert">{healthError}</p>}
-          {!health && !healthError && <div className="skeleton" style={{ height: 160 }} aria-hidden="true" />}
-          {health && (
-            <>
-              <dl className="kv">
-                <dt>Service</dt><dd><span className={`badge ${health.ok ? 'badge--ok' : 'badge--bad'}`}><Icon name={health.ok ? 'check' : 'x'} />{health.ok ? 'Up' : 'Down'}</span> {health.chainMode && <span className="small muted">chain mode {health.chainMode}</span>}</dd>
-                <dt>Latest block</dt><dd className="mono">{health.block ?? 'unknown'}</dd>
-                <dt>Relayer balance</dt><dd>{health.relayerBalanceWei ? formatWbt(health.relayerBalanceWei) : 'unknown'}</dd>
-              </dl>
-              <span className="label">Last events</span>
-              {health.lastEvents?.length ? (
-                <ul className="l-rows" style={{ margin: 0 }}>
+        )}
+      </form>
+
+      <section aria-labelledby="tamper-h" className="stack">
+        <h2 id="tamper-h" className="section-title">Tampered copies</h2>
+        {!doc ? (
+          <div className="state"><p className="muted">Load an honest invoice to build its tampered copies.</p></div>
+        ) : (
+          <ul className="demo-grid">
+            {TAMPERS.map((t) => {
+              const path = docLinkPath(t.make(doc));
+              return (
+                <li key={t.id} className="card demo-card">
+                  <span className="demo-card__icon" aria-hidden="true"><Icon name="x" size={18} /></span>
+                  <h3>{t.label}</h3>
+                  <p className="small muted">{t.what}</p>
+                  <p className="demo-card__fails"><span>Expect FAIL on</span>{t.fails}</p>
+                  <div className="demo-card__actions">
+                    <Link className="btn btn--primary" to={path}>Open this link<Icon name="arrow" className="arrow" /></Link>
+                    <button type="button" className="icon-btn icon-btn--menu" aria-label={`Copy the ${t.label.toLowerCase()} link`} onClick={() => void navigator.clipboard?.writeText(location.origin + path).then(() => toast('Link copied'))}>
+                      <Icon name="copy" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="card stack" aria-labelledby="ops-h" aria-live="polite">
+        <div className="row row--between">
+          <h2 id="ops-h">Relayer status</h2>
+          <button type="button" className="btn btn--secondary" onClick={loadHealth}><Icon name="refresh" size={18} />Refresh status</button>
+        </div>
+        {healthError && <p className="field-error" role="alert">{healthError}</p>}
+        {!health && !healthError && <div className="skeleton" style={{ height: 96 }} aria-hidden="true" />}
+        {health && (
+          <>
+            <div className="ops-tiles">
+              <div>
+                <span>Service</span>
+                <strong className={health.ok ? 'is-ok' : 'is-bad'}><Icon name={health.ok ? 'check' : 'x'} size={18} />{health.ok ? 'Up' : 'Down'}</strong>
+                <em>{health.chainMode ? `chain mode ${health.chainMode}` : 'chain mode unknown'}</em>
+              </div>
+              <div><span>Latest block</span><strong className="mono">{health.block ?? 'unknown'}</strong><em>Whitechain Sepolia · 1874</em></div>
+              <div><span>Relayer balance</span><strong>{health.relayerBalanceWei ? formatWbt(health.relayerBalanceWei) : 'unknown'}</strong><em>pays the gas for buyers</em></div>
+            </div>
+            {health.lastEvents?.length ? (
+              <>
+                <span className="label">Last events</span>
+                <ol className="ops-events">
                   {health.lastEvents.map((e, i) => (
-                    <li key={i}><span>{e.event}</span><span className="small muted">{formatIso(e.at)}</span></li>
+                    <li key={i}><span>{eventLabel(e.event).label}</span><time className="small muted" dateTime={e.at}>{formatIso(e.at)}</time></li>
                   ))}
-                </ul>
-              ) : <p className="small muted">No events yet.</p>}
-            </>
-          )}
-        </section>
-      </div>
+                </ol>
+              </>
+            ) : null}
+          </>
+        )}
+      </section>
     </div>
   );
 }

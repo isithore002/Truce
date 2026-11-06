@@ -12,6 +12,13 @@ import { config } from '../lib/config';
 import { encodeDoc, parseVerifyInput } from '../lib/doclink';
 
 /** Public verify page: no wallet. Paste a payment link or a hash, see PASS or FAIL and the payment status. */
+/** The ten checks, grouped for the empty state. Wording mirrors lib/messages; the real results come from invoice-lib. */
+const PREVIEW = [
+  { title: 'The document', items: ['Well formed', 'Signed by the merchant wallet', 'Line items unchanged since signing', 'Not expired'] },
+  { title: 'The merchant’s domain', items: ['truce.json found on the domain', 'Signing wallet listed there', 'Payout wallet listed there', 'Invoice bound to that domain'] },
+  { title: 'The payment', items: ['Accepted token on chain 1874', 'Your wallet is allowed to pay'] },
+];
+
 export function VerifyPage() {
   const [params, setParams] = useSearchParams();
   const initial = params.get('hash') ?? (params.get('doc') ? `#doc=${params.get('doc')}` : '');
@@ -85,11 +92,23 @@ export function VerifyPage() {
       </form>
 
       {!target && !submitted && (
-        <div className="state">
-          <Icon name="shield" size={28} />
-          <h2>No invoice checked yet</h2>
-          <p className="muted measure">Truce checks ten things, including whether the payout wallet is listed on the merchant’s domain. A swapped wallet shows FAIL.</p>
-        </div>
+        <section className="verify-preview" aria-labelledby="vp-h">
+          <div className="verify-preview__head">
+            <span className="verify-preview__icon" aria-hidden="true"><Icon name="shield" size={22} /></span>
+            <div>
+              <h2 id="vp-h">What we check, in about a second</h2>
+              <p className="small muted">All ten must pass before the Pay button wakes up. A swapped payout wallet fails two of them.</p>
+            </div>
+          </div>
+          <div className="verify-preview__groups">
+            {PREVIEW.map((g) => (
+              <div key={g.title} className="verify-preview__group">
+                <h3>{g.title}</h3>
+                <ul>{g.items.map((i) => <li key={i}><Icon name="check" size={14} />{i}</li>)}</ul>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {target && v.error && (

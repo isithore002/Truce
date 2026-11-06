@@ -11,6 +11,7 @@ export function SetupWizard() {
   const { wallet, connect, toast } = useApp();
   const [s, setS] = useState<MerchantSetup>(loadSetup);
   const [touched, setTouched] = useState(false);
+  const [published, setPublished] = useState(false);
   const domain = normaliseDomain(s.domain);
   const domainErr = validateDomain(s.domain);
   const payoutErr = isAddress(s.payout) ? undefined : 'Enter a wallet address: 0x and 40 hex characters';
@@ -18,11 +19,15 @@ export function SetupWizard() {
   const file = wallet.address ? buildDomainFile(s, wallet.address) : undefined;
   const ready = !!wallet.address && !domainErr && !payoutErr && !nameErr && !!file;
   const json = file ? JSON.stringify(file, null, 2) : '';
+  const fieldsDone = touched && !domainErr && !payoutErr && !nameErr;
+  const done = [!!wallet.address, fieldsDone, published && ready, false];
+  const active = done.findIndex((d) => !d);
+  const stepState = (i: number) => (done[i] ? 'done' : i === active ? 'active' : 'todo');
   const set = (k: keyof MerchantSetup) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });
 
   return (
     <ol className="steps">
-      <li data-done={!!wallet.address}>
+      <li data-done={done[0]} data-step={stepState(0)}>
         <div className="card stack">
           <h2>Connect your signing wallet</h2>
           <p className="small muted">This wallet signs every invoice. Use a wallet you already back up; Truce never sees its key.</p>
@@ -35,7 +40,7 @@ export function SetupWizard() {
         </div>
       </li>
 
-      <li data-done={touched && !domainErr && !payoutErr && !nameErr}>
+      <li data-done={done[1]} data-step={stepState(1)}>
         <form className="card stack" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!domainErr && !payoutErr && !nameErr) { saveSetup({ ...s, domain }); toast('Setup saved in this browser'); } }} noValidate>
           <h2>Name your domain and payout wallet</h2>
           <div className="form-grid">
@@ -64,7 +69,7 @@ export function SetupWizard() {
         </form>
       </li>
 
-      <li data-done={false}>
+      <li data-done={done[2]} data-step={stepState(2)}>
         <div className="card stack">
           <h2>Publish truce.json on your domain</h2>
           {!ready ? (
@@ -74,10 +79,10 @@ export function SetupWizard() {
               <p className="small">Upload this file so it opens at <code>https://{domain}/.well-known/truce.json</code>.</p>
               <pre className="codeblock" aria-label="truce.json contents">{json}</pre>
               <div className="btn-row">
-                <button type="button" className="btn btn--primary" onClick={() => downloadBlob(new Blob([json + '\n'], { type: 'application/json' }), 'truce.json')}>
+                <button type="button" className="btn btn--primary" onClick={() => { downloadBlob(new Blob([json + '\n'], { type: 'application/json' }), 'truce.json'); setPublished(true); }}>
                   <Icon name="download" size={18} />Download truce.json
                 </button>
-                <button type="button" className="btn btn--secondary" onClick={() => void navigator.clipboard?.writeText(json).then(() => toast('Copied'))}>
+                <button type="button" className="btn btn--secondary" onClick={() => void navigator.clipboard?.writeText(json).then(() => { toast('Copied'); setPublished(true); })}>
                   <Icon name="copy" size={18} />Copy contents
                 </button>
               </div>
@@ -92,7 +97,7 @@ export function SetupWizard() {
         </div>
       </li>
 
-      <li data-done={false}>
+      <li data-done={false} data-step={stepState(3)}>
         <div className="card stack">
           <h2>Send your first invoice</h2>
           <p className="small muted">Create an invoice, send the link, and check it yourself on the public verify page first.</p>

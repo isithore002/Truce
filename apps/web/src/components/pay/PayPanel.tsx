@@ -35,15 +35,17 @@ export function PayPanel({ gate, amount, dueDate, mode, onMode, dueDateFeature, 
     <section className="card stack" aria-labelledby="pay-title">
       <h3 id="pay-title">Pay this invoice</h3>
       {dueDateFeature && gate.enabled && (
-        <fieldset className="stack stack--sm" style={{ border: 0, padding: 0, margin: 0 }} disabled={busy}>
-          <legend className="label" style={{ marginBottom: 8 }}>When</legend>
-          <label className="check-row">
+        <fieldset className="pay-mode" disabled={busy}>
+          <legend className="label">When should it be paid?</legend>
+          <label className="pay-mode__opt">
             <input type="radio" name="mode" checked={mode === 'now'} onChange={() => onMode('now')} />
-            <span><strong>Pay now.</strong> Settles in a few seconds.</span>
+            <span className="pay-mode__icon" aria-hidden="true"><Icon name="check" size={16} /></span>
+            <span><strong>Pay now</strong><small>Settles in a few seconds.</small></span>
           </label>
-          <label className="check-row">
+          <label className="pay-mode__opt">
             <input type="radio" name="mode" checked={mode === 'due'} onChange={() => onMode('due')} />
-            <span><strong>Pay on the due date, {formatDay(dueDate)}.</strong> You sign now; funds stay in your wallet until then. {SNAPSHOT_NOTE}</span>
+            <span className="pay-mode__icon" aria-hidden="true"><Icon name="clock" size={16} /></span>
+            <span><strong>On the due date · {formatDay(dueDate)}</strong><small>Sign now, collected then. {SNAPSHOT_NOTE}</small></span>
           </label>
         </fieldset>
       )}
