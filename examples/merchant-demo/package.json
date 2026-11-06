@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx --env-file-if-exists=../../.env invoice.ts",
-    "count": "node ../../tools/count-integration-lines.mjs invoice.ts"
+    "shop": "tsx --env-file-if-exists=../../.env shop.ts",
+    "test": "vitest run",
+    "count": "node ../../tools/count-integration-lines.mjs invoice.ts && node ../../tools/count-integration-lines.mjs shop.ts"
   },
   "dependencies": {
     "@truce/sdk": "*",
