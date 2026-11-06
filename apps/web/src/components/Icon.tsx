@@ -46,8 +46,8 @@ export function Icon({ name, size, className, label }: { name: IconName; size?: 
 export function Logo() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect width="24" height="24" rx="3" fill="currentColor" />
-      <path d="M6.5 12.5l3.5 3.5 7.5-8" fill="none" stroke="var(--p-bg)" strokeWidth="2.4" strokeLinecap="square" />
+      <rect width="24" height="24" rx="6" fill="var(--p-accent)" />
+      <path d="M6.5 12.5l3.5 3.5 7.5-8" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
