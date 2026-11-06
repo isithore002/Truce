@@ -4,6 +4,8 @@ Only the web app (`apps/web`, a static Vite build) goes on Vercel. The API serve
 
 Nothing here has been deployed by us: there is no Vercel login in the build environment. The config below was checked by running the same install and build commands locally (`npm ci --dry-run`, `npm run build` in `apps/web`), not on Vercel.
 
+**Current deployment (2026-11-06):** project `truce-web` in the `isithores-projects` Vercel team, production URL https://truce-web.vercel.app, demo mode (no environment variables). Settings: Root Directory `apps/web`, "Include source files outside of the Root Directory" on, Node 22.x, framework Vite, connected to `isithore002/Truce` on `main` (so a push to `main` redeploys it). It was created with the Vercel CLI from a clean clone of GitHub, because a local build ran out of memory on the development machine. Preview deployment URLs are behind Vercel login; the production URL is public. If you create your own project, the dashboard steps below give the same result.
+
 ## 1. Demo-mode site (no server, no real transactions)
 
 The app starts in demo (mock) mode when no environment variables are set. Every page shows a red **DEMO MODE** banner and payments are simulated, so this is a way to try the screens, not to make a payment.

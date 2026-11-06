@@ -180,7 +180,7 @@ Use small amounts (0.01 USDT): the test wallets hold a few USDT, and a 1,250 USD
 
 **Server settings** (all optional; see `.env.example`): `RELAYER_DAILY_BUDGET_WBT` (default 0.5), `RATE_LIMIT_PER_MINUTE`, `CONFIRM_TIMEOUT_MS`, `RPC_URL`, `RPC_FALLBACK_URL` (`none` turns the backup off), `DEMO_DOMAINS=1` (serve fictional `.example` merchants), `DEMO_REGISTRY_DIR` (where demo names registered on Setup are kept; git-ignored).
 
-**Hosting the web app.** The web app is a static build that fits Vercel; the API server needs a host that keeps one process running. Steps and limits: [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
+**Demo-mode site:** https://truce-web.vercel.app. It runs the web app with no server and no chain, so every payment on it is simulated and a red DEMO MODE banner says so; real testnet transactions are in the explorer links above and in the video. **Hosting the web app.** The web app is a static build that fits Vercel; the API server needs a host that keeps one process running. Steps and limits: [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
 
 **Real domain.** The merchant publishes `https://<domain>/.well-known/truce.json` (no redirects, valid JSON) and presses **Check my domain**. Truce does not publish it for them: the domain is the trust anchor.
 
