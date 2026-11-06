@@ -7,6 +7,8 @@ const repoRoot = new URL("../../../../", import.meta.url);
 export interface ChainConfig {
   chainId: number;
   rpcUrl: string;
+  /** Backup RPC for reads only (simulation, receipts, balances). Unset or "none" turns it off. Sending never uses it. */
+  fallbackRpcUrl?: string;
   settler: Address;
   tokens: Address[];
   explorerBase: string;
@@ -48,6 +50,8 @@ export function loadChainConfig(env: Record<string, string | undefined> = proces
   return {
     chainId: 1874,
     rpcUrl: env.RPC_URL || "https://rpc.testnet.whitechain.io",
+    // The backup RPC from docs (answers chain id 0x752). Set RPC_FALLBACK_URL=none to run without it.
+    fallbackRpcUrl: env.RPC_FALLBACK_URL?.toLowerCase() === "none" ? undefined : env.RPC_FALLBACK_URL || "https://rpc.ankr.com/whitechain_testnet",
     settler: getAddress(settler),
     tokens: [TRACK_USDT],
     explorerBase: "https://explorer.testnet.whitechain.io",

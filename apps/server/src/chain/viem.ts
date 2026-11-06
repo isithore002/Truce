@@ -2,6 +2,7 @@ import {
   createPublicClient,
   createWalletClient,
   defineChain,
+  fallback,
   http,
   type Address,
   type Hex,
@@ -64,6 +65,17 @@ const GAS_PAD_NUM = 12n; // +20% on the estimate, so a small drift between simul
 const GAS_PAD_DEN = 10n;
 
 /**
+ * Transport for reads (simulation, receipts, balances, health). It tries the primary RPC and, if that errors or is slow,
+ * the backup. Sending is NOT given this transport: a transaction that reached the network on a call that then timed out
+ * must not be offered to a second node, or the module could report a payment that went through as failed.
+ */
+export function readTransport(cfg: Pick<ChainConfig, "rpcUrl" | "fallbackRpcUrl">) {
+  if (!cfg.fallbackRpcUrl) return http(cfg.rpcUrl);
+  // A short timeout and one retry on the primary so a slow node costs a few seconds, not the default ten per attempt.
+  return fallback([http(cfg.rpcUrl, { timeout: 5_000, retryCount: 1 }), http(cfg.fallbackRpcUrl)]);
+}
+
+/**
  * CHAIN_MODE=testnet. The relayer simulates settle() first (free) and only sends if the simulation passes,
  * so a swapped payout, an expired invoice or an empty balance is refused before it costs any gas.
  */
@@ -86,7 +98,7 @@ export class ViemChain implements ChainModule {
       nativeCurrency: { name: "WBT", symbol: "WBT", decimals: 18 },
       rpcUrls: { default: { http: [cfg.rpcUrl] } },
     });
-    this.pub = deps.publicClient ?? (createPublicClient({ chain, transport: http(cfg.rpcUrl) }) as unknown as PublicApi);
+    this.pub = deps.publicClient ?? (createPublicClient({ chain, transport: readTransport(cfg) }) as unknown as PublicApi);
     this.wallet = deps.walletClient ?? (createWalletClient({ account, chain, transport: http(cfg.rpcUrl) }) as unknown as WalletApi);
     this.budget = deps.budget ?? new RelayerBudget(cfg.dailyBudgetWei);
     this.limiter = deps.limiter ?? new RateLimiter(cfg.ratePerMinute, 60_000);
