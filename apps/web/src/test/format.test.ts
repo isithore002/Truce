@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dateInputToUnix, formatDateUtc, formatDay, formatUsdt, formatWbt, isAddress, isHash, lineTotal, parseQuantity, parseUsdt,
+  dateInputToUnix, formatDateUtc, formatDay, formatDue, formatUsdt, formatWbt, isAddress, isHash, lineTotal, MAX_DEMO_MINUTES, parseDemoMinutes, parseQuantity, parseUsdt,
   relativeTime, sameAddress, shortAddress, sumLineItems, unixToDateInput,
 } from '../lib/format';
 
@@ -60,6 +60,17 @@ describe('dates', () => {
   it('formats UTC', () => {
     expect(formatDateUtc('1767225600')).toBe('1 Jan 2026, 00:00 UTC');
     expect(formatDay('1767225600')).toBe('1 Jan 2026');
+  });
+  it('formatDue shows a day at midnight UTC and the time otherwise', () => {
+    expect(formatDue('1767225600')).toBe('1 Jan 2026');
+    expect(formatDue(1767225600 + 150)).toBe('1 Jan 2026, 00:02 UTC');
+    expect(formatDue(1767225600n + 3600n)).toBe('1 Jan 2026, 01:00 UTC');
+  });
+  it('parses the demo due-in-minutes field', () => {
+    expect(parseDemoMinutes('2')).toBe(2);
+    expect(parseDemoMinutes(' 90 ')).toBe(90);
+    expect(parseDemoMinutes(String(MAX_DEMO_MINUTES))).toBe(MAX_DEMO_MINUTES);
+    for (const bad of ['', '0', '-1', '1.5', 'abc', '2m', '1441', '99999']) expect(parseDemoMinutes(bad)).toBeNull();
   });
   it('converts date inputs as UTC midnight', () => {
     expect(dateInputToUnix('2026-01-01')).toBe('1767225600');

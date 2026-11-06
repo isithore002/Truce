@@ -5,7 +5,7 @@ import { api, ApiError } from '../../lib/api';
 import type { Address, CreateInvoiceResult, Invoice, InvoiceDetails } from '../../lib/api/types';
 import { ZERO_ADDRESS } from '../../lib/api/types';
 import { chain } from '../../lib/config';
-import { dateInputToUnix, formatUsdt, isAddress, parseQuantity, parseUsdt, unixToDateInput } from '../../lib/format';
+import { dateInputToUnix, formatUsdt, isAddress, MAX_DEMO_MINUTES, nowSeconds, parseDemoMinutes, parseQuantity, parseUsdt, unixToDateInput } from '../../lib/format';
 import { invoiceLib } from '../../lib/invoiceLib';
 import { loadSetup } from '../../lib/merchantSetup';
 import { errorMessage } from '../../lib/messages';
@@ -23,6 +23,7 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
   const [client, setClient] = useState('');
   const [lines, setLines] = useState<Line[]>([{ description: '', quantity: '1', price: '' }]);
   const [due, setDue] = useState(defaultDue);
+  const [demoMinutes, setDemoMinutes] = useState('');
   const [grace, setGrace] = useState('3');
   const [payer, setPayer] = useState('');
   const [notes, setNotes] = useState('Net 30');
@@ -35,13 +36,19 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
 
   const parsed = lines.map((l) => ({ q: parseQuantity(l.quantity), p: parseUsdt(l.price), d: l.description.trim() }));
   const total = parsed.reduce((acc, l) => (l.q.ok && l.p.ok ? acc + l.q.value * l.p.value : acc), 0n);
-  const dueUnix = dateInputToUnix(due);
+  // The demo "due in N minutes" field only exists for invoices marked EXAMPLE DATA, and wins over the calendar date when filled.
+  const demoOn = example && demoMinutes.trim() !== '';
+  const minutesN = parseDemoMinutes(demoMinutes);
+  const dateUnix = dateInputToUnix(due);
   const graceN = /^\d+$/.test(grace) ? Number(grace) : NaN;
   const errors = {
     client: client.trim() ? undefined : 'Enter the client name',
     lines: parsed.some((l) => !l.d || !l.q.ok || !l.p.ok) ? 'Every line needs a description, a whole quantity and a price' : total === 0n ? 'The total must be above 0' : undefined,
-    due: !dueUnix ? 'Pick a due date' : Number(dueUnix) < todaySec - DAY ? 'The due date is in the past' : undefined,
-    grace: Number.isNaN(graceN) || graceN < 0 || graceN > 90 ? 'Grace is 0 to 90 days' : undefined,
+    due: demoOn
+      ? minutesN ? undefined : `Enter whole minutes from 1 to ${MAX_DEMO_MINUTES}, or clear the field`
+      : !dateUnix ? 'Pick a due date' : Number(dateUnix) < todaySec - DAY ? 'The due date is in the past' : undefined,
+    // A scheduled payment needs a window after the due time: with 0 days the invoice expires the moment it is due.
+    grace: Number.isNaN(graceN) || graceN < 0 || graceN > 90 ? 'Grace is 0 to 90 days' : demoOn && graceN < 1 ? 'Use at least 1 day so the scheduled payment has time to run' : undefined,
     payer: payer.trim() && !isAddress(payer.trim()) ? 'Enter a wallet address or leave empty' : undefined,
     setup: !setup.domain || !isAddress(setup.payout) ? 'Finish setup first: domain and payout wallet' : undefined,
   };
@@ -65,9 +72,12 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
         lineItems: parsed.map((l) => ({ description: l.d, quantity: (l.q as { value: bigint }).value.toString(), unitPrice: (l.p as { value: bigint }).value.toString() })),
         notes: notes.trim(), example,
       };
+      // The clock is read here, at signing time, so a minutes field typed a while ago still means "N minutes from now".
+      const dueAt = demoOn ? (minutesN ? String(nowSeconds() + minutesN * 60) : null) : dateUnix;
+      if (!dueAt) throw new Error('Check the due date.');
       const invoice: Invoice = {
         invoiceId: invoiceLib.newInvoiceId(), merchant, payout: setup.payout as Address, token: cfg.token, amount: total.toString(),
-        dueDate: dueUnix!, expiry: String(Number(dueUnix) + graceN * DAY), payer: (payer.trim() || ZERO_ADDRESS) as Address,
+        dueDate: dueAt, expiry: String(Number(dueAt) + graceN * DAY), payer: (payer.trim() || ZERO_ADDRESS) as Address,
         domainHash: invoiceLib.domainHash(setup.domain), memoHash: invoiceLib.memoHash(details),
       };
       const signature = await signTypedData(merchant, invoiceLib.invoiceTypedData(invoice, { chainId: cfg.chainId ?? chain.id, settler: cfg.settler }));
@@ -146,9 +156,18 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
       <div className="form-grid">
         <div className="field">
           <label htmlFor="ci-due">Due date (UTC)</label>
-          <input id="ci-due" type="date" className="input" value={due} onChange={(e) => setDue(e.target.value)} aria-invalid={!!err('due')} />
-          {err('due') && <span className="field-error">{err('due')}</span>}
+          <input id="ci-due" type="date" className="input" value={due} onChange={(e) => setDue(e.target.value)} disabled={demoOn} aria-invalid={!!err('due') && !demoOn} />
+          {err('due') && !demoOn && <span className="field-error">{err('due')}</span>}
         </div>
+        {example && (
+          <div className="field">
+            <label htmlFor="ci-demo-min">Demo: due in N minutes (optional)</label>
+            <input id="ci-demo-min" className="input" inputMode="numeric" value={demoMinutes} onChange={(e) => setDemoMinutes(e.target.value)} placeholder="e.g. 2" aria-invalid={demoOn && !!err('due')} aria-describedby="ci-demo-min-h" />
+            {demoOn && err('due')
+              ? <span className="field-error">{err('due')}</span>
+              : <span id="ci-demo-min-h" className="hint">{demoOn ? `Due ${minutesN} minute${minutesN === 1 ? '' : 's'} after you sign. Time-compressed for the demo; replaces the date.` : 'Time-compressed demo: replaces the date. Example data only.'}</span>}
+          </div>
+        )}
         <div className="field">
           <label htmlFor="ci-grace">Payable for (days after due)</label>
           <input id="ci-grace" className="input" inputMode="numeric" value={grace} onChange={(e) => setGrace(e.target.value)} aria-invalid={!!err('grace')} aria-describedby="ci-grace-h" />

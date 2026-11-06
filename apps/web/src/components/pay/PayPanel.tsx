@@ -1,5 +1,5 @@
 import type { PayMode } from '../../lib/api/types';
-import { formatDay, formatUsdt } from '../../lib/format';
+import { formatDue, formatUsdt } from '../../lib/format';
 import { COMMITMENT_NOTE, SNAPSHOT_NOTE } from '../../lib/messages';
 import type { PayGate } from '../../lib/payGate';
 import { Icon } from '../Icon';
@@ -28,7 +28,7 @@ export function PayPanel({ gate, amount, dueDate, mode, onMode, dueDateFeature, 
     : !connected
       ? `Connect wallet to pay ${amt} USDT`
       : mode === 'due'
-        ? `Schedule ${amt} USDT for ${formatDay(dueDate)}`
+        ? `Schedule ${amt} USDT for ${formatDue(dueDate)}`
         : `Pay ${amt} USDT`;
 
   return (
@@ -45,7 +45,7 @@ export function PayPanel({ gate, amount, dueDate, mode, onMode, dueDateFeature, 
           <label className="pay-mode__opt">
             <input type="radio" name="mode" checked={mode === 'due'} onChange={() => onMode('due')} />
             <span className="pay-mode__icon" aria-hidden="true"><Icon name="clock" size={16} /></span>
-            <span><strong>On the due date · {formatDay(dueDate)}</strong><small>Sign now, collected then. {SNAPSHOT_NOTE}</small></span>
+            <span><strong>On the due date · {formatDue(dueDate)}</strong><small>Sign now, collected then. {SNAPSHOT_NOTE}</small></span>
           </label>
         </fieldset>
       )}

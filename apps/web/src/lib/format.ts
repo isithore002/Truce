@@ -82,6 +82,28 @@ export function formatDay(sec: string | number | bigint): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+/**
+ * A due date at exactly 00:00 UTC reads as a day. Anything else (the demo "due in N minutes") also shows the time,
+ * so a two-minute invoice does not read "Collected on 6 Nov 2026".
+ */
+export function formatDue(sec: string | number | bigint): string {
+  return Number(sec) % 86_400 === 0 ? formatDay(sec) : formatDateUtc(sec);
+}
+
+/** Current unix time in seconds. Kept here so components read the clock through one named helper. */
+export const nowSeconds = (): number => Math.floor(Date.now() / 1000);
+
+/** Longest demo due time: one day. */
+export const MAX_DEMO_MINUTES = 1440;
+
+/** The demo "due in N minutes" field: whole minutes from 1 to 1440, otherwise null. Empty is handled by the caller. */
+export function parseDemoMinutes(value: string): number | null {
+  const v = value.trim();
+  if (!/^\d{1,4}$/.test(v)) return null;
+  const n = Number(v);
+  return n >= 1 && n <= MAX_DEMO_MINUTES ? n : null;
+}
+
 /** Local time with the zone name, for "your time" lines */
 export function formatDateLocal(sec: string | number | bigint, locale?: string): string {
   return toDate(sec).toLocaleString(locale, {

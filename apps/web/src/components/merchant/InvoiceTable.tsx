@@ -1,5 +1,5 @@
 import type { Hex, InvoiceSummary } from '../../lib/api/types';
-import { formatDay } from '../../lib/format';
+import { formatDue } from '../../lib/format';
 import { HEALTH_MESSAGES } from '../../lib/messages';
 import { AddressChip } from '../invoice/AddressChip';
 import { AmountUsdt } from '../invoice/AmountUsdt';
@@ -26,7 +26,7 @@ export function InvoiceTable({ rows, selected, onOpen }: { rows: InvoiceSummary[
                 <button type="button" className="rowlink" onClick={(e) => { e.stopPropagation(); onOpen(r.hash); }}>{r.clientName}</button>
               </td>
               <td data-label="Amount" className="num"><AmountUsdt value={r.amount} size="sm" /></td>
-              <td data-label="Due" style={{ whiteSpace: 'nowrap' }}>{formatDay(r.dueDate)}</td>
+              <td data-label="Due" style={{ whiteSpace: 'nowrap' }}>{formatDue(r.dueDate)}</td>
               <td data-label="Status">
                 <span className="stack stack--sm" style={{ gap: 2 }}>
                   <StatusBadge status={r.status} overlay={r.overlay} />

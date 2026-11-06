@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { InvoiceRecord } from '../../lib/api/types';
 import { explorerTx } from '../../lib/config';
-import { formatDay, formatIso } from '../../lib/format';
+import { formatDue, formatIso } from '../../lib/format';
 import { SNAPSHOT_NOTE } from '../../lib/messages';
 import { Icon } from '../Icon';
 import { AddressChip } from '../invoice/AddressChip';
@@ -28,7 +28,7 @@ export function Receipt({ record, explorerUrl }: { record: InvoiceRecord; explor
         <dd>{doc.details.merchantName} <span className="mono small muted">{doc.domain}</span></dd>
         {tx && (<><dt>Transaction</dt><dd><AddressChip value={tx.txHash} kind="tx" /></dd></>)}
         {tx?.paidAt && (<><dt>Paid at</dt><dd>{formatIso(tx.paidAt)}</dd></>)}
-        {scheduled && (<><dt>Collected on</dt><dd>{formatDay(doc.invoice.dueDate)}</dd></>)}
+        {scheduled && (<><dt>Collected on</dt><dd>{formatDue(doc.invoice.dueDate)}</dd></>)}
       </dl>
       {scheduled && <p className="small muted">{SNAPSHOT_NOTE}</p>}
       <div className="btn-row">

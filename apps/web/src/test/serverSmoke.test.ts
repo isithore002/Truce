@@ -135,6 +135,21 @@ describe.skipIf(!run)('web client against apps/server', () => {
     expect(failed).toEqual(['payout_in_domain_file']);
   });
 
+  it('a due time seconds away (the demo "due in N minutes") is collected by the scheduler', async () => {
+    const { cfg, doc, hash } = await makeDoc(6, 'Smoke due in seconds');
+    await httpApi.createInvoice(doc);
+    const { typed, validAfter, validBefore } = invoiceLib.receiveWithAuthorizationTypedData({
+      invoice: doc.invoice, invoiceHash: hash, from: buyer.address, settler: cfg.settler, mode: 'due', chainId: cfg.chainId,
+    });
+    expect(Number(validAfter)).toBe(Number(doc.invoice.dueDate)); // the window opens at the second the merchant signed
+    const sig = invoiceLib.splitSignature(await buyer.signTypedData(typed as never));
+    const res = await httpApi.authorize(hash, { mode: 'due', from: buyer.address, validAfter, validBefore, ...sig });
+    expect(res.status).toBe('SCHEDULED_OK');
+    expect((await httpApi.getInvoice(hash)).status).toBe('SCHEDULED_OK');
+    const paid = await pollStatus(hash, 'PAID', 60); // scheduler ticks every 5 s
+    expect(paid.tx?.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+  }, 60_000);
+
   it('pay on the due date, then cancel', async () => {
     const { cfg, doc, hash } = await makeDoc(10 * 60, 'Smoke scheduled');
     await httpApi.createInvoice(doc);

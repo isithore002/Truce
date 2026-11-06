@@ -1,7 +1,7 @@
 import type { InvoiceDoc, Overlay, Status } from '../../lib/api/types';
 import { ZERO_ADDRESS } from '../../lib/api/types';
 import { config } from '../../lib/config';
-import { formatDateLocal, formatDay, relativeTime, sameAddress } from '../../lib/format';
+import { formatDateLocal, formatDue, relativeTime, sameAddress } from '../../lib/format';
 import { Icon } from '../Icon';
 import { AddressChip } from './AddressChip';
 import { AmountUsdt } from './AmountUsdt';
@@ -53,11 +53,11 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
           <dd>{details.clientName}</dd>
           <dt>Due date</dt>
           <dd>
-            {formatDay(inv.dueDate)} <span className="muted small">({relativeTime(inv.dueDate)})</span>
+            {formatDue(inv.dueDate)} <span className="muted small">({relativeTime(inv.dueDate)})</span>
             <div className="small muted">Your time: {formatDateLocal(inv.dueDate)}</div>
           </dd>
           <dt data-field="expiry">Payable until</dt>
-          <dd data-field="expiry">{formatDay(inv.expiry)} <span className="muted small">({relativeTime(inv.expiry)})</span></dd>
+          <dd data-field="expiry">{formatDue(inv.expiry)} <span className="muted small">({relativeTime(inv.expiry)})</span></dd>
           <dt data-field="payer">Who can pay</dt>
           <dd data-field="payer">{locked ? <AddressChip value={inv.payer} label="Only" /> : 'Any wallet'}</dd>
           {details.notes && (
