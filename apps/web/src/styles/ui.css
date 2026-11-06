@@ -160,3 +160,4 @@ a.card:hover { transform: translateY(-2px); border-color: var(--p-line-strong); 
 .scenario-bar .wrap { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); align-items: center; min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
 .scenario-bar select { background: var(--p-inv-surface); color: var(--p-inv-ink); border: 1px solid rgba(238, 236, 234, .2); border-radius: var(--r-sm); height: 32px; padding: 0 8px; }
 .scenario-bar a { color: var(--p-inv-ink); }
+.nav__progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--p-gold); transform-origin: left; transform: scaleX(0); pointer-events: none; }

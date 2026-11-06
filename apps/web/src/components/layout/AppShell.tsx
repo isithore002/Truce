@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { config } from '../../lib/config';
+import { usePageProgress } from '../../lib/motion';
 import { Icon, Logo } from '../Icon';
 import { ExampleBanner } from './ExampleBanner';
 import { LimitsFooter } from './LimitsFooter';
@@ -17,6 +18,7 @@ const LINKS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const progress = usePageProgress();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
@@ -55,6 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        <span className="nav__progress" aria-hidden="true" style={{ transform: `scaleX(${progress})` }} />
       </header>
       <ExampleBanner />
       {config.demoTools && config.apiMode === 'mock' && <ScenarioBar />}

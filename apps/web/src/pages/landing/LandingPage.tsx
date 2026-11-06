@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { config } from '../../lib/config';
+import { useCountUp, useReveal, useScrollProgress } from '../../lib/motion';
 import { FAQ, Faq } from './Faq';
 import { DashboardFrame, PhoneMock } from './Mockups';
 
@@ -73,7 +74,7 @@ function AttackCard() {
         <span className="l-eyebrow-plain">Try it: one invoice, ten checks</span>
         <div className={`l-attack__verdict ${swapped ? 'is-fail' : 'is-pass'}`} aria-live="polite">
           <Icon name={swapped ? 'x' : 'check'} size={28} />
-          <span>{swapped ? 'FAIL' : 'PASS'}</span>
+          <span key={String(swapped)}>{swapped ? 'FAIL' : 'PASS'}</span>
         </div>
         <label className="l-switch">
           <input type="checkbox" checked={swapped} onChange={(e) => setSwapped(e.target.checked)} />
@@ -125,48 +126,60 @@ function Dial() {
 export function LandingPage() {
   const { refs, active } = useActiveStep(STEPS.length);
   const tryLink = config.demoTools ? '/demo' : '/verify';
+  const rootRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  useReveal(rootRef);
+  useScrollProgress(frameRef, 0.35);
 
   return (
-    <div className="landing">
+    <div className="landing" ref={rootRef}>
       <section className="l-hero">
+        <div className="l-hero__glow" aria-hidden="true" />
         <div className="wrap">
-          <span className="l-eyebrow"><i aria-hidden="true" />Testnet · Whitechain Sepolia · USDT</span>
-          <h1>Invoices your buyer can check before they pay.</h1>
-          <p className="lead muted measure">
+          <span className="l-eyebrow" data-reveal><i aria-hidden="true" />Testnet · Whitechain Sepolia · USDT</span>
+          <h1 className="l-words" aria-label="Invoices your buyer can check before they pay.">
+            {'Invoices your buyer can check before they pay.'.split(' ').map((w, i) => (
+              <span key={i} aria-hidden="true" data-reveal data-reveal-delay={80 + i * 60}>{w}</span>
+            ))}
+          </h1>
+          <p className="lead muted measure" data-reveal data-reveal-delay="520">
             Every invoice is bound to the merchant's own domain. The buyer sees PASS or FAIL, signs once, and the contract
             pays only the wallet the merchant published.
           </p>
-          <div className="btn-row">
+          <div className="btn-row" data-reveal data-reveal-delay="640">
             <Link className="btn btn--primary btn--lg" to="/setup">Create an invoice<Icon name="arrow" className="arrow" /></Link>
             <Link className="btn btn--secondary btn--lg" to="/verify">Check an invoice</Link>
           </div>
         </div>
-        <div className="wrap l-hero__frame">
-          <DashboardFrame />
+        <div className="wrap l-hero__frame" ref={frameRef}>
+          <div className="l-tilt" data-reveal data-reveal-delay="300">
+            <DashboardFrame />
+          </div>
         </div>
       </section>
 
       <section className="l-stats" aria-label="What every payment goes through">
         <div className="wrap">
-          <p className="l-stats__lead">One file on your domain. One signature from the buyer. One settlement per invoice.</p>
+          <p className="l-stats__lead" data-reveal>One file on your domain. One signature from the buyer. One settlement per invoice.</p>
           <dl className="l-stats__row">
-            <div><dt>Checks before the Pay button wakes up</dt><dd>10</dd></div>
-            <div><dt>Signature from the buyer, no gas needed</dt><dd>1</dd></div>
-            <div><dt>Times an invoice can be paid</dt><dd>1×</dd></div>
+            <Stat to={10} label="Checks before the Pay button wakes up" delay={0} />
+            <Stat to={1} label="Signature from the buyer, no gas needed" delay={120} />
+            <Stat to={1} suffix="×" label="Times an invoice can be paid" delay={240} />
           </dl>
         </div>
       </section>
 
       <section className="l-features">
         <div className="wrap">
-          <span className="l-eyebrow"><i aria-hidden="true" />How it works</span>
+          <span className="l-eyebrow" data-reveal><i aria-hidden="true" />How it works</span>
           <div className="l-features__grid">
-            <div className="l-features__media" aria-hidden="true">
+            <div className="l-features__media" aria-hidden="true" data-reveal>
               <div className="l-glow" />
-              <PhoneMock step={STEPS[active].tone} />
-              <span className="l-chip l-chip--a"><Icon name="check" size={12} />{STEPS[active].chip}</span>
+              <div key={active} className="l-phone-swap"><PhoneMock step={STEPS[active].tone} /></div>
+              <span key={`c${active}`} className="l-chip l-chip--a"><Icon name="check" size={12} />{STEPS[active].chip}</span>
               <span className="l-chip l-chip--b">Due · net 30</span>
               <span className="l-features__count">{STEPS[active].n} / 03</span>
+              <span className="l-features__bar"><i style={{ width: `${((active + 1) / STEPS.length) * 100}%` }} /></span>
             </div>
             <div className="l-features__steps">
               {STEPS.map((s, i) => (
@@ -184,17 +197,16 @@ export function LandingPage() {
       <section className="l-try">
         <div className="wrap">
           <ul className="l-try__facts">
-            <li><strong>Domain-bound</strong><span>Checked against truce.json</span></li>
-            <li><strong>Signed payout</strong><span>Enforced on chain</span></li>
-            <li><strong>Key pinning</strong><span>Warns when wallets change</span></li>
-            <li><strong>Gasless for buyers</strong><span>Relayer pays in WBT</span></li>
+            {[['Domain-bound', 'Checked against truce.json'], ['Signed payout', 'Enforced on chain'], ['Key pinning', 'Warns when wallets change'], ['Gasless for buyers', 'Relayer pays in WBT']].map(([t, d], i) => (
+              <li key={t} data-reveal data-reveal-delay={i * 90}><strong>{t}</strong><span>{d}</span></li>
+            ))}
           </ul>
-          <AttackCard />
+          <div data-reveal data-reveal-delay="120"><AttackCard /></div>
         </div>
       </section>
 
       <section className="l-band">
-        <div className="wrap"><div className="l-band__inner">
+        <div className="wrap"><div className="l-band__inner" data-reveal>
           <div className="stack">
             <span className="l-eyebrow l-eyebrow--inv"><i aria-hidden="true" />The attack we stop</span>
             <h2>A swapped payout wallet fails twice: in the app and on chain.</h2>
@@ -211,25 +223,35 @@ export function LandingPage() {
 
       <section className="l-faq">
         <div className="wrap l-faq__grid">
-          <span className="l-eyebrow"><i aria-hidden="true" />FAQ</span>
+          <span className="l-eyebrow" data-reveal><i aria-hidden="true" />FAQ</span>
           <div>
-            <h2>Everything you need to know</h2>
-            <Faq items={FAQ} />
+            <h2 data-reveal>Everything you need to know</h2>
+            <div data-reveal data-reveal-delay="120"><Faq items={FAQ} /></div>
           </div>
         </div>
       </section>
 
       <section className="l-cta">
         <div className="wrap">
-          <h2><span>Send an invoice</span> your client can check before paying you in USDT.</h2>
-          <div className="btn-row">
+          <h2 data-reveal><span>Send an invoice</span> your client can check before paying you in USDT.</h2>
+          <div className="btn-row" data-reveal data-reveal-delay="120">
             <Link className="btn btn--primary btn--lg" to="/setup">Set up your domain<Icon name="arrow" className="arrow" /></Link>
             <Link className="btn btn--secondary btn--lg" to="/merchant">Open the dashboard</Link>
           </div>
         </div>
       </section>
 
-      <div className="l-wordmark" aria-hidden="true">Truce</div>
+      <div className="l-wordmark" aria-hidden="true" data-reveal>Truce</div>
+    </div>
+  );
+}
+
+function Stat({ to, suffix = '', label, delay }: { to: number; suffix?: string; label: string; delay: number }) {
+  const { ref, n } = useCountUp(to, 1100);
+  return (
+    <div data-reveal data-reveal-delay={delay}>
+      <dt>{label}</dt>
+      <dd ref={ref as React.RefObject<HTMLElement & HTMLDListElement>} aria-label={`${to}${suffix}`}><span aria-hidden="true">{n}{suffix}</span></dd>
     </div>
   );
 }
