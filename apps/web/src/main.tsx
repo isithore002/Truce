@@ -9,6 +9,7 @@ import './styles/app.css';
 import './styles/motion.css';
 import './styles/dashboard.css';
 import './styles/accent.css';
+import './styles/neon.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
