@@ -1,0 +1,14 @@
+{
+  "name": "@truce/merchant-demo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=../../.env invoice.ts",
+    "count": "node ../../tools/count-integration-lines.mjs invoice.ts"
+  },
+  "dependencies": {
+    "@truce/sdk": "*",
+    "viem": "^2.57.16"
+  }
+}

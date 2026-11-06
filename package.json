@@ -17,7 +17,8 @@
     "e2e": "tsx --env-file-if-exists=.env scripts/e2e-settle.ts",
     "server": "npm run start -w apps/server",
     "e2e:api": "tsx --env-file-if-exists=.env scripts/e2e-api.ts",
-    "test:all": "npm test -w @truce/invoice-lib -w @truce/server -w @truce/web --if-present && npm test -w @truce/sdk --if-present && cd contracts && forge test"
+    "test:all": "npm test -w @truce/invoice-lib -w @truce/server -w @truce/web --if-present && npm test -w @truce/sdk --if-present && cd contracts && forge test",
+    "count:sdk-lines": "npm run count -w @truce/merchant-demo"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
