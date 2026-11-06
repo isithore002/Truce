@@ -1,16 +1,22 @@
-import type { TypedDataDefinition } from 'viem';
+import {
+  cancelAuthorizationTypedData as libCancelTypedData,
+  domainHash as libDomainHash,
+  invoiceHash as libInvoiceHash,
+  invoiceTypedData as libInvoiceTypedData,
+  memoHash as libMemoHash,
+  receiveAuthorizationTypedData,
+  splitSignature as libSplitSignature,
+  type Invoice as LibInvoice,
+  type PaymentMode,
+} from '@truce/invoice-lib';
+import { pad, toHex, type TypedDataDefinition } from 'viem';
 import type { Address, Hex, Invoice, InvoiceDetails } from './api/types';
-import { config } from './config';
 
 /**
- * The only door to hashing and typed-data building. The web app must not re-implement them:
- * they belong to @truce/invoice-lib (owner: developer A). That package has no exports yet (FRONTEND-REQUESTS.md R1),
- * so in server mode every builder throws InvoiceLibMissingError and the UI shows the reason on a disabled button.
- * In mock mode a stand-in returns random ids and placeholder typed data that only the mock wallet accepts.
- *
- * When invoice-lib lands, implement `realLib` with its exports (one file change):
- *   import { newInvoiceId, domainHash, memoHash, invoiceTypedData, receiveWithAuthorizationTypedData,
- *            cancelAuthorizationTypedData, invoiceHash } from '@truce/invoice-lib';
+ * The only door to hashing and typed-data building. Everything here delegates to @truce/invoice-lib; the web app
+ * only converts between the wire form it uses everywhere (numbers as decimal strings) and the library's bigints.
+ * The library is pure (no network, no keys), so mock mode uses it too: hashes and typed data are real in both modes.
+ * Only the mock wallet's signature is fake (lib/wallet), and the mock adapter never recovers signatures.
  */
 
 export interface InvoiceCtx {
@@ -18,60 +24,46 @@ export interface InvoiceCtx {
   settler: Address;
 }
 
-export interface InvoiceLibApi {
-  available: boolean;
-  newInvoiceId(): Hex;
-  domainHash(domain: string): Hex;
-  memoHash(details: InvoiceDetails): Hex;
-  invoiceHash(invoice: Invoice, ctx: InvoiceCtx): Hex;
-  invoiceTypedData(invoice: Invoice, ctx: InvoiceCtx): TypedDataDefinition;
-  receiveWithAuthorizationTypedData(p: {
-    token: Address; chainId: number; from: Address; to: Address; value: string; validAfter: string; validBefore: string; nonce: Hex;
-  }): TypedDataDefinition;
-  cancelAuthorizationTypedData(p: { token: Address; chainId: number; authorizer: Address; nonce: Hex }): TypedDataDefinition;
+/** Wire invoice (decimal strings) -> library invoice (bigints). */
+export function toLibInvoice(i: Invoice): LibInvoice {
+  return { ...i, amount: BigInt(i.amount), dueDate: BigInt(i.dueDate), expiry: BigInt(i.expiry) };
 }
 
-export class InvoiceLibMissingError extends Error {
-  constructor(what: string) {
-    super(`${what} needs @truce/invoice-lib, which has no exports yet. Use mock mode or wait for the library.`);
-    this.name = 'InvoiceLibMissingError';
-  }
-}
+const signingCtx = (ctx: InvoiceCtx) => ({ chainId: ctx.chainId, verifyingContract: ctx.settler });
 
-const missing = (what: string) => () => {
-  throw new InvoiceLibMissingError(what);
+/** The library's details type requires notes and example; the wire form always carries both. */
+const libDetails = (d: InvoiceDetails) => ({ ...d, notes: d.notes ?? '', example: d.example ?? false });
+
+export const invoiceLib = {
+  /** 16 random bytes, left-padded to 32 (INTERFACES section 1). Not a hash. */
+  newInvoiceId(): Hex {
+    return pad(toHex(globalThis.crypto.getRandomValues(new Uint8Array(16))), { size: 32 });
+  },
+  domainHash: (domain: string): Hex => libDomainHash(domain),
+  memoHash: (details: InvoiceDetails): Hex => libMemoHash(libDetails(details)),
+  invoiceHash: (invoice: Invoice, ctx: InvoiceCtx): Hex => libInvoiceHash(toLibInvoice(invoice), signingCtx(ctx)),
+  invoiceTypedData: (invoice: Invoice, ctx: InvoiceCtx) =>
+    libInvoiceTypedData(toLibInvoice(invoice), signingCtx(ctx)) as unknown as TypedDataDefinition,
+  /** EIP-3009 ReceiveWithAuthorization to the settler, nonce = invoice hash, window from the library. */
+  receiveWithAuthorizationTypedData(p: { invoice: Invoice; invoiceHash: Hex; from: Address; settler: Address; mode: PaymentMode; chainId: number }) {
+    const typed = receiveAuthorizationTypedData(
+      { from: p.from, settler: p.settler, invoice: toLibInvoice(p.invoice), invoiceHash: p.invoiceHash, mode: p.mode },
+      { chainId: p.chainId, token: p.invoice.token },
+    );
+    return {
+      typed: typed as unknown as TypedDataDefinition,
+      validAfter: typed.message.validAfter.toString(),
+      validBefore: typed.message.validBefore.toString(),
+    };
+  },
+  cancelAuthorizationTypedData: (p: { token: Address; chainId: number; authorizer: Address; nonce: Hex }) =>
+    libCancelTypedData({ authorizer: p.authorizer, nonce: p.nonce }, { chainId: p.chainId, token: p.token }) as unknown as TypedDataDefinition,
+  splitSignature: (sig: Hex) => libSplitSignature(sig),
 };
 
-const realLib: InvoiceLibApi = {
-  available: false,
-  newInvoiceId: missing('Creating an invoice id'),
-  domainHash: missing('Hashing the domain'),
-  memoHash: missing('Hashing the invoice details'),
-  invoiceHash: missing('Hashing the invoice'),
-  invoiceTypedData: missing('Signing the invoice'),
-  receiveWithAuthorizationTypedData: missing('Signing the payment'),
-  cancelAuthorizationTypedData: missing('Signing the cancellation'),
-};
-
-/** Random 32-byte hex. A mock stand-in only: not a hash of anything. */
+/** Random hex for mock-only stand-ins (fake tx hashes, fake signatures). Not a hash of anything. */
 export function randomHex(bytes = 32): Hex {
   const a = new Uint8Array(bytes);
   globalThis.crypto.getRandomValues(a);
   return `0x${Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
-
-const placeholder = (primaryType: string, message: Record<string, unknown>): TypedDataDefinition =>
-  ({ domain: { name: 'Truce mock (not signable)' }, types: { [primaryType]: [] }, primaryType, message }) as unknown as TypedDataDefinition;
-
-export const mockLib: InvoiceLibApi = {
-  available: true,
-  newInvoiceId: () => `0x${'0'.repeat(32)}${randomHex(16).slice(2)}` as Hex,
-  domainHash: () => randomHex(),
-  memoHash: () => randomHex(),
-  invoiceHash: () => randomHex(),
-  invoiceTypedData: (invoice) => placeholder('Invoice', { ...invoice }),
-  receiveWithAuthorizationTypedData: (p) => placeholder('ReceiveWithAuthorization', { ...p }),
-  cancelAuthorizationTypedData: (p) => placeholder('CancelAuthorization', { ...p }),
-};
-
-export const invoiceLib: InvoiceLibApi = config.apiMode === 'mock' ? mockLib : realLib;

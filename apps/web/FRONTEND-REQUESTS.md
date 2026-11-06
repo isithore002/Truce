@@ -1,16 +1,17 @@
 # Frontend requests
 
-Things the web app needs from other owners. Until each one is answered, the web app runs on the mock adapter (`VITE_API_MODE=mock`)
-using the **proposed** shape, marked `PROPOSED (Rn)` in `src/lib/api/types.ts`. No server or library code was changed.
+Things the web app needs from the library or the server. No server or library code was changed by the web app;
+where the real shape differs from what the UI uses, `src/lib/api/client.ts` (`fromServer`) maps it, field for field.
 
-| Id | Owner | What | Why | Proposed shape | Status |
-|---|---|---|---|---|---|
-| R1 | A (`packages/invoice-lib`) | Exports: `newInvoiceId()`, `domainHash(domain)`, `memoHash(details)`, `invoiceHash(invoice, {chainId, settler})`, `invoiceTypedData(invoice, ctx)`, `receiveWithAuthorizationTypedData({token, chainId, from, to, value, validAfter, validBefore, nonce})`, `cancelAuthorizationTypedData({token, chainId, authorizer, nonce})`, and the types in INTERFACES sections 1 to 5 | The package is empty. The web app must not re-implement hashing or typed data, so in server mode every signing button is disabled with the reason shown | viem `TypedDataDefinition` return values, so the browser passes them straight to `signTypedData` | open |
-| R2 | B (`apps/server` api) | Shape of `GET /api/config` | Pay needs the settler address (`to` in ReceiveWithAuthorization) and token; the shell needs example mode | `{ chainId, settler, token, tokenSymbol, tokenDecimals, explorerUrl, exampleMode }` | open |
-| R3 | B | Shapes of `health` and `tx` in `GET /api/invoices/:hash`, plus the refund overlay and the chosen mode | Verify shows payer and tx link; merchant table shows the reason text | `health: { ok, reason, checkedAt? }`, `tx?: { txHash, payer?, paidAt? }`, `overlay?: "PARTIALLY_REFUNDED" \| "REFUNDED"`, `mode?: "now" \| "due"` | open |
-| R4 | B | Audit trail for an invoice | The verify page and merchant detail panel show a timeline; no endpoint returns events | `events?: { at (ISO), type, detail?, txHash? }[]` on `GET /api/invoices/:hash` | open |
-| R5 | B | Shape of `pin` in the verify response | INTERFACES writes `pin: {...}`. Pinning is browser-side, so the UI does not read it | Either drop it, or `{ domain, signingAddress, payoutAddresses }` from the domain file | open |
-| R6 | B | Item shape of `GET /api/merchants/:address/invoices` | INTERFACES says `Invoice summary[]` | `{ hash, invoiceId, clientName, amount, dueDate, status, overlay?, healthReason?, txHash?, paidAt?, example? }` | open |
-| R7 | B / A | Shape of `GET /healthz` | /demo ops panel shows block, relayer balance and last events | `{ ok, chainMode?, block?, relayerBalanceWei?, lastEvents?: { at, event, hash? }[] }` | open |
-| R8 | shared (`docs/INTERFACES.md`) | Check id `document_valid` | The frontend brief lists ten check ids including `document_valid`; INTERFACES section 3 lists nine. The UI handles both | Add `document_valid` to INTERFACES section 3 | open |
-| R9 | shared | `docs/design/A-PRODUCT.md`, `B-DIAGRAMS.md`, `C-TECHNICAL.md` | The brief asks to read them; they are not in the repo. Framework and flows follow `docs/SPEC.md`, `ARCHITECTURE.md` and `INTERFACES.md` instead | n/a | open |
+| Id | Owner | What | Status |
+|---|---|---|---|
+| R1 | `packages/invoice-lib` | Hashing and typed-data builders | **done**: `src/lib/invoiceLib.ts` delegates to `invoiceHash`, `invoiceTypedData`, `domainHash`, `memoHash`, `receiveAuthorizationTypedData`, `cancelAuthorizationTypedData`, `splitSignature`. Only the 16-byte invoice id is generated in the web app (the library's `randomInvoiceId` is not exported; exporting it would remove that copy) |
+| R2 | `apps/server` | `GET /api/config` shape | **done**: server sends `{ chainId, settler, tokens[], explorerBase, exampleMode }`; mapped to `token = tokens[0]`, `explorerUrl = explorerBase` |
+| R3 | `apps/server` | health, payment, mode on `GET /api/invoices/:hash` | **done**: `payment {payer, paidAt, txHash}` -> `tx`; `health {reason, checkedAt}` -> `ok = reason === "NONE"`; `schedule` present -> mode `due`. No refund overlay yet (refunds are contract-only, by scope) |
+| R4 | `apps/server` | audit trail | **done**: `events[]` with unix `at`; mapped to ISO |
+| R5 | shared | `pin` in verify response | **closed**: pinning is browser-side; the server returns `domainFile` and `onchain` instead, typed in `VerifyResponse` |
+| R6 | `apps/server` | merchant list item | **done**: `{ items: [...] }`; mapped (no `healthReason` per row, so the dashboard shows the status badge without reason text) |
+| R7 | `apps/server` | `/healthz` | **done**: `{ ok, mode, rpc.blockNumber, relayer.wbtBalance }` mapped. There are no "last events" on the server; the ops panel shows "No events yet" |
+| R8 | shared | check id `document_valid` | **done**: the library lists all ten ids; the web app re-exports `CHECK_IDS` from it |
+| R9 | shared | `docs/design/*` | open: still referenced by the brief; flows follow `SPEC.md`, `ARCHITECTURE.md`, `INTERFACES.md` |
+| R10 | `apps/server` | `POST /api/invoices/:hash/cancel` | **open**: route not built. Due-date mode returns `NOT_IMPLEMENTED`. Both sit behind `VITE_FEATURE_DUE_DATE` (off), so the default UI never calls them |

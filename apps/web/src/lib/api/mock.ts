@@ -160,7 +160,7 @@ export const mockApi: TruceApi = {
         ...r, status: 'SCHEDULED_OK', mode: 'due', health: { ok: true, reason: 'NONE', checkedAt: at },
         events: [...r.events, { at, type: 'authorized', detail: 'Buyer signed a payment for the due date' }, { at, type: 'scheduled', detail: 'Collection set for the due date' }],
       });
-      return { status: 'SCHEDULED_OK' };
+      return { status: 'SCHEDULED_OK' as const };
     }
     persist({ ...r, mode: 'now', events: [...r.events, { at, type: 'authorized', detail: 'Buyer signed a pay-now authorization' }] });
     setTimeout(() => {
@@ -173,7 +173,7 @@ export const mockApi: TruceApi = {
         events: [...cur.events, { at: paidAt, type: 'paid', detail: `${formatUsdt(cur.doc.invoice.amount)} USDT settled to the signed payout wallet`, txHash }],
       });
     }, 1600);
-    return { status: 'ISSUED' };
+    return { status: 'PENDING' as const };
   },
 
   async cancel(hash) {

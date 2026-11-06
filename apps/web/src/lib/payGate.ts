@@ -18,7 +18,6 @@ export interface PayGateInput {
   pin?: PinCheck;
   pinConfirmed?: boolean;
   account?: Address;
-  libAvailable: boolean;
   settlerKnown: boolean;
   nowSec?: number;
 }
@@ -47,7 +46,6 @@ export function payGate(i: PayGateInput): PayGate {
   if (i.account && !sameAddress(payer, ZERO_ADDRESS) && !sameAddress(payer, i.account)) {
     return { enabled: false, reason: `Only ${shortAddress(payer)} can pay this invoice. Switch wallets to continue.`, tone: 'warn' };
   }
-  if (!i.libAvailable) return { enabled: false, reason: 'Signing needs @truce/invoice-lib, which is not published yet. Mock mode works today.', tone: 'neutral' };
   if (!i.settlerKnown) return { enabled: false, reason: 'Waiting for the server settings (settler address).', tone: 'neutral' };
   return { enabled: true };
 }

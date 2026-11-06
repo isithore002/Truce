@@ -8,7 +8,7 @@ import { payGate, type PayGateInput } from '../lib/payGate';
 
 const records = buildFixtures();
 const byScenario = new Map(records.map((r) => [r.scenario!, r]));
-const base: Omit<PayGateInput, 'verify' | 'doc' | 'status'> = { libAvailable: true, settlerKnown: true, pin: { state: 'NEW' } };
+const base: Omit<PayGateInput, 'verify' | 'doc' | 'status'> = { settlerKnown: true, pin: { state: 'NEW' } };
 
 const renderPanel = (gate: ReturnType<typeof payGate>) =>
   renderToStaticMarkup(
@@ -82,6 +82,6 @@ describe('Pay gate on PASS', () => {
     }
     const locked = { ...pass.doc, invoice: { ...pass.doc.invoice, payer: ADDR.betaLabs as Address } };
     expect(payGate({ ...base, verify, doc: locked, account: ADDR.otherSigner as Address }).enabled).toBe(false);
-    expect(payGate({ ...base, verify, doc: pass.doc, libAvailable: false }).enabled).toBe(false);
+    expect(payGate({ ...base, verify, doc: pass.doc, settlerKnown: false }).enabled).toBe(false);
   });
 });

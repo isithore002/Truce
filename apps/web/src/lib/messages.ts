@@ -113,6 +113,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   NOT_SCHEDULED: 'There is no scheduled payment to cancel.',
   NOT_PAID: 'This invoice has not been paid yet.',
   REFUND_EXCEEDS_PAID: 'A refund cannot be larger than the amount paid.',
+  NOT_IMPLEMENTED: 'This option is not available on the server yet. Pay now instead.',
   INTERNAL: 'Something went wrong on our side. Try again in a moment.',
 };
 

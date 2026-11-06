@@ -1,11 +1,15 @@
 /**
- * Types for the Truce HTTP API and invoice document.
+ * Types for the Truce HTTP API and invoice document, in the wire form the browser uses (numbers as decimal strings).
  *
- * These should be re-exported from @truce/invoice-lib. That package is still empty (see FRONTEND-REQUESTS.md R1),
- * so the frozen shapes from docs/INTERFACES.md are written out here, field for field, and nothing else.
- * Shapes the docs leave open are marked PROPOSED with the request id; the mock adapter uses them, the server may differ.
- * When invoice-lib lands: replace the frozen block with `export type { ... } from '@truce/invoice-lib'`.
+ * Shared shapes come from @truce/invoice-lib (check ids, domain file, payment mode). The wire invoice is written out
+ * with viem's Hex/Address types and checked against the library's `InvoiceDocWire` at compile time below.
+ * Server response shapes are in `serverTypes.ts`; `client.ts` maps them onto the UI shapes in the second half of this file.
  */
+
+import type { Check, DomainFile, InvoiceDocWire } from '@truce/invoice-lib';
+
+export { CHECK_IDS } from '@truce/invoice-lib';
+export type { Check, CheckId, DomainFile } from '@truce/invoice-lib';
 
 export type Hex = `0x${string}`;
 export type Address = `0x${string}`;
@@ -39,8 +43,10 @@ export interface InvoiceDetails {
   merchantName: string;
   clientName: string;
   lineItems: LineItem[];
-  notes?: string;
-  example?: boolean;
+  /** Always present (empty string for none): the library rejects details without it. */
+  notes: string;
+  /** true shows the EXAMPLE DATA banner */
+  example: boolean;
 }
 
 export interface InvoiceDoc {
@@ -51,41 +57,21 @@ export interface InvoiceDoc {
   details: InvoiceDetails;
 }
 
-export interface DomainFile {
-  version: 1;
-  name: string;
-  signingAddress: Address;
-  payoutAddresses: Address[];
-  chainIds: number[];
-}
-
-export const CHECK_IDS = [
-  'document_valid',
-  'signature_valid',
-  'domain_file_reachable',
-  'merchant_matches_domain_file',
-  'payout_in_domain_file',
-  'domain_hash_matches',
-  'chain_and_token_allowed',
-  'not_expired',
-  'memo_hash_matches_details',
-  'payer_ok',
-] as const;
-export type CheckId = (typeof CHECK_IDS)[number];
-
-export interface Check {
-  id: CheckId;
-  ok: boolean;
-  message: string;
-}
+/** Compile-time check: our wire document is assignable to the library's. */
+type Assert<T extends true> = T;
+export type _WireMatchesLib = Assert<InvoiceDoc extends InvoiceDocWire ? true : false>;
 
 export type Verdict = 'PASS' | 'FAIL';
 
+/** POST /api/verify and GET /api/verify?hash= (apps/server routes.ts `runVerify`). */
 export interface VerifyResponse {
   result: Verdict;
   checks: Check[];
-  /** INTERFACES.md writes `pin: {...}` without a shape (R5). The UI does not read it; pinning is browser-side. */
-  pin?: unknown;
+  /** The digest the merchant signed; absent when the document is not valid. */
+  invoiceHash?: Hex;
+  domainFile?: DomainFile;
+  /** Read from InvoiceSettler. `unavailable` when the RPC could not be reached. */
+  onchain?: { paid: boolean; payer?: Address; refunded?: string; txHash?: Hex; unavailable?: boolean };
 }
 
 export const STATUSES = ['ISSUED', 'SCHEDULED_OK', 'AT_RISK', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED'] as const;
@@ -117,7 +103,7 @@ export interface CancelSig {
 export const ERROR_CODES = [
   'INVALID_DOCUMENT', 'SIGNATURE_INVALID', 'TOKEN_NOT_ALLOWED', 'EXPIRED', 'DUPLICATE', 'NOT_FOUND', 'AUTH_INVALID',
   'WRONG_PAYER', 'SIMULATION_FAILED', 'INSUFFICIENT_BALANCE', 'ALREADY_PAID', 'RELAYER_BUDGET_EXHAUSTED', 'RATE_LIMITED',
-  'NOT_SCHEDULED', 'NOT_PAID', 'REFUND_EXCEEDS_PAID', 'INTERNAL',
+  'NOT_SCHEDULED', 'NOT_PAID', 'REFUND_EXCEEDS_PAID', 'NOT_IMPLEMENTED', 'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
@@ -125,9 +111,9 @@ export interface ApiErrorBody {
   error: { code: ErrorCode | string; message: string; details?: unknown };
 }
 
-/* ---------- PROPOSED: open in docs, requested in FRONTEND-REQUESTS.md ---------- */
+/* ---------- UI shapes: client.ts maps the server responses (serverTypes.ts) onto these; mock.ts produces them directly ---------- */
 
-/** R2: GET /api/config */
+/** GET /api/config, normalised (the server sends tokens[] and explorerBase) */
 export interface PublicConfig {
   chainId: number;
   settler: Address;
@@ -138,29 +124,30 @@ export interface PublicConfig {
   exampleMode: boolean;
 }
 
-/** R3: `health` in GET /api/invoices/:hash */
+/** `health` in GET /api/invoices/:hash (ok is derived: reason NONE) */
 export interface Health {
   ok: boolean;
   reason: HealthReason;
   checkedAt?: string;
 }
 
-/** R3: `tx` in GET /api/invoices/:hash */
+/** `payment` in GET /api/invoices/:hash */
 export interface TxInfo {
   txHash: Hex;
   payer?: Address;
   paidAt?: string;
 }
 
-/** R4: audit trail for the timeline */
+/** Audit trail entry (`events` in GET /api/invoices/:hash); times as ISO strings */
 export interface AuditEvent {
   at: string;
-  type: 'created' | 'verified' | 'authorized' | 'scheduled' | 'at_risk' | 'failed' | 'paid' | 'cancelled' | 'expired' | 'refunded';
+  /** created, authorized, pending, paid, paid_onchain, settle_failed, scheduled, at_risk, failed, cancelled, expired, refunded */
+  type: string;
   detail?: string;
   txHash?: Hex;
 }
 
-/** GET /api/invoices/:hash: `{ doc, status, health, tx? }` (frozen) + overlay and events (R3, R4) */
+/** GET /api/invoices/:hash */
 export interface InvoiceRecord {
   hash: Hex;
   doc: InvoiceDoc;
@@ -169,11 +156,11 @@ export interface InvoiceRecord {
   health?: Health;
   tx?: TxInfo;
   events?: AuditEvent[];
-  /** Mode the buyer chose, when authorized (R3) */
+  /** 'due' when a due-date authorization is stored (the server sends `schedule`) */
   mode?: PayMode;
 }
 
-/** R6: GET /api/merchants/:address/invoices item */
+/** GET /api/merchants/:address/invoices item */
 export interface InvoiceSummary {
   hash: Hex;
   invoiceId: Hex;
@@ -188,7 +175,7 @@ export interface InvoiceSummary {
   example?: boolean;
 }
 
-/** R7: GET /healthz */
+/** GET /healthz, normalised */
 export interface Healthz {
   ok: boolean;
   chainMode?: string;

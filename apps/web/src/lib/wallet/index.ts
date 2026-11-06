@@ -1,4 +1,4 @@
-import { createWalletClient, custom, parseSignature, type TypedDataDefinition, type WalletClient } from 'viem';
+import { createWalletClient, custom, type TypedDataDefinition, type WalletClient } from 'viem';
 import { MOCK_ACCOUNTS } from '../api/fixtures';
 import type { Address, Hex } from '../api/types';
 import { chain, config } from '../config';
@@ -89,12 +89,6 @@ export async function signTypedData(account: Address, typedData: TypedDataDefini
   } catch (e) {
     throw mapError(e);
   }
-}
-
-export function splitSignature(sig: Hex): { v: number; r: Hex; s: Hex } {
-  const p = parseSignature(sig);
-  const v = p.v !== undefined ? Number(p.v) : 27 + (p.yParity ?? 0);
-  return { v, r: p.r, s: p.s };
 }
 
 export function onWalletChange(cb: () => void): () => void {

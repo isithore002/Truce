@@ -20,7 +20,7 @@ import { invoiceLib } from '../lib/invoiceLib';
 import { errorMessage, HEALTH_MESSAGES } from '../lib/messages';
 import { payGate } from '../lib/payGate';
 import { comparePin, savePin } from '../lib/pins';
-import { signTypedData, splitSignature } from '../lib/wallet';
+import { signTypedData } from '../lib/wallet';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,7 +59,7 @@ export function PayPage() {
 
   const gate = payGate({
     verify: v.verify, loading: v.loading, doc, status: record?.status, fromDocLink: target !== undefined && typeof target === 'object' && target.kind === 'doc',
-    pin, pinConfirmed, account: app.wallet.address, libAvailable: invoiceLib.available, settlerKnown: !!app.publicConfig?.settler,
+    pin, pinConfirmed, account: app.wallet.address, settlerKnown: !!app.publicConfig?.settler,
   });
 
   async function pay() {
@@ -69,16 +69,13 @@ export function PayPage() {
     if (!from) return setError(app.wallet.error ?? 'Connect a wallet to pay.');
     if (!(await app.switchChain())) return setError('Switch your wallet to Whitechain Sepolia (chain 1874) to pay.');
     const settler = app.publicConfig!.settler;
-    const validAfter = mode === 'due' ? doc.invoice.dueDate : '0';
-    const validBefore = doc.invoice.expiry;
     let failedAt: PayStep = 'signing';
     try {
       setStep('signing');
-      const typed = invoiceLib.receiveWithAuthorizationTypedData({
-        token: doc.invoice.token, chainId: app.publicConfig?.chainId ?? chain.id, from, to: settler,
-        value: doc.invoice.amount, validAfter, validBefore, nonce: target.hash,
+      const { typed, validAfter, validBefore } = invoiceLib.receiveWithAuthorizationTypedData({
+        invoice: doc.invoice, invoiceHash: target.hash, from, settler, mode, chainId: app.publicConfig?.chainId ?? chain.id,
       });
-      const sig = splitSignature(await signTypedData(from, typed));
+      const sig = invoiceLib.splitSignature(await signTypedData(from, typed));
       failedAt = 'simulating';
       setStep('simulating');
       const res = await api.authorize(target.hash, { mode, from, validAfter, validBefore, ...sig });
@@ -113,8 +110,8 @@ export function PayPage() {
     try {
       const from = app.wallet.address ?? (await app.connect('buyer'));
       if (!from || !(await app.switchChain())) throw new Error('Connect your wallet on Whitechain Sepolia to cancel.');
-      const typed = invoiceLib.cancelAuthorizationTypedData({ token: doc.invoice.token, chainId: chain.id, authorizer: from, nonce: target.hash });
-      await api.cancel(target.hash, splitSignature(await signTypedData(from, typed)));
+      const typed = invoiceLib.cancelAuthorizationTypedData({ token: doc.invoice.token, chainId: app.publicConfig?.chainId ?? chain.id, authorizer: from, nonce: target.hash });
+      await api.cancel(target.hash, invoiceLib.splitSignature(await signTypedData(from, typed)));
       setPaid(await v.refresh());
       app.toast('Scheduled payment cancelled');
     } catch (e) {

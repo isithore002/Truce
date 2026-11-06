@@ -63,7 +63,7 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
       const details: InvoiceDetails = {
         merchantName: setup.name, clientName: client.trim(),
         lineItems: parsed.map((l) => ({ description: l.d, quantity: (l.q as { value: bigint }).value.toString(), unitPrice: (l.p as { value: bigint }).value.toString() })),
-        ...(notes.trim() ? { notes: notes.trim() } : {}), example,
+        notes: notes.trim(), example,
       };
       const invoice: Invoice = {
         invoiceId: invoiceLib.newInvoiceId(), merchant, payout: setup.payout as Address, token: cfg.token, amount: total.toString(),
@@ -171,12 +171,12 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
 
       {error && <div className="notice notice--bad" role="alert"><Icon name="alert" /><p>{error}</p></div>}
       <div className="btn-row">
-        <button type="submit" className="btn btn--primary" disabled={busy || !invoiceLib.available} aria-describedby="ci-sign-h">
+        <button type="submit" className="btn btn--primary" disabled={busy} aria-describedby="ci-sign-h">
           {busy ? 'Waiting for your wallet…' : `Sign and create invoice${total > 0n ? ` for ${formatUsdt(total)} USDT` : ''}`}
         </button>
       </div>
       <p id="ci-sign-h" className="small muted">
-        {invoiceLib.available ? 'Your wallet signs the invoice. Nothing is sent on chain and no gas is used.' : 'Signing needs @truce/invoice-lib, which is not published yet. Mock mode works today.'}
+        Your wallet signs the invoice. Nothing is sent on chain and no gas is used.
       </p>
     </form>
   );

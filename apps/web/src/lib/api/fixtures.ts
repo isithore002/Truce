@@ -10,17 +10,17 @@ export const TRACK_USDT = '0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7' as Addres
 export const MOCK_SETTLER = '0x5e771e4000000000000000000000000000001874' as Address;
 
 export const ADDR = {
-  northlightSigner: '0x7a1E3c9B42d5F0e8A6b1C4d7E2f9a3B6c8D0e1F2',
-  northlightPayout: '0x3B9c4D2e5F6a7B8c9D0e1F2a3B4c5D6e7F8a9B0c',
-  attackerPayout: '0xBadC0de5a1e4F00d9C2e7b3A8d1F6c4E0b5A9d37',
-  otherSigner: '0xE4b7A0d3C6f9E2a5D8b1C4e7F0a3D6c9B2e5F876',
-  betaLabs: '0x5e2D8a1C9b3F4e6A7d0B2c5E8f1A4b7D9c3E6f20',
-  kestrelOldSigner: '0x9C4e1B7a2D5f8E0c3A6b9D2e5F8a1C4b7E0d3A61',
-  kestrelOldPayout: '0x6D3a9F2c5E8b1A4d7C0e3F6a9B2c5D8e1F4a7B03',
-  kestrelSigner: '0x2f8A5d1E7c4B0a9F6e3D2c1B8a7F4e5D0c9B6a32',
-  kestrelPayout: '0x8B1e4A7d0C3f6E9a2D5b8C1e4F7a0D3c6B9e2F54',
-  fernhillSigner: '0x4A7d0C3f6E9a2D5b8C1e4F7a0D3c6B9e2F5a8D17',
-  fernhillPayout: '0x0C3f6E9a2D5b8C1e4F7a0D3c6B9e2F5a8D1b4E29',
+  northlightSigner: '0x7a1e3c9b42d5f0e8a6b1c4d7e2f9a3b6c8d0e1f2',
+  northlightPayout: '0x3b9c4d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c',
+  attackerPayout: '0xbadc0de5a1e4f00d9c2e7b3a8d1f6c4e0b5a9d37',
+  otherSigner: '0xe4b7a0d3c6f9e2a5d8b1c4e7f0a3d6c9b2e5f876',
+  betaLabs: '0x5e2d8a1c9b3f4e6a7d0b2c5e8f1a4b7d9c3e6f20',
+  kestrelOldSigner: '0x9c4e1b7a2d5f8e0c3a6b9d2e5f8a1c4b7e0d3a61',
+  kestrelOldPayout: '0x6d3a9f2c5e8b1a4d7c0e3f6a9b2c5d8e1f4a7b03',
+  kestrelSigner: '0x2f8a5d1e7c4b0a9f6e3d2c1b8a7f4e5d0c9b6a32',
+  kestrelPayout: '0x8b1e4a7d0c3f6e9a2d5b8c1e4f7a0d3c6b9e2f54',
+  fernhillSigner: '0x4a7d0c3f6e9a2d5b8c1e4f7a0d3c6b9e2f5a8d17',
+  fernhillPayout: '0x0c3f6e9a2d5b8c1e4f7a0d3c6b9e2f5a8d1b4e29',
 } as const satisfies Record<string, Address>;
 
 /** Mock wallet accounts: the merchant pages sign as Northlight, the buyer pages as Beta Labs. */
