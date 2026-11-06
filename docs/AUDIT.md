@@ -160,3 +160,7 @@ The chain module's reads (simulation, receipts, balances, health) now try the pr
 Evidence: 5 tests, 3 of which run the real client against two local HTTP servers acting as nodes (primary down: answered from the backup after the primary was tried; primary healthy: the backup is never contacted; no backup configured: fails as before), and 2 for the setting. **Live:** a temporary server with its primary RPC set to a dead port still returned the real chain id, block number and relayer balance in 2.3 seconds through the backup. Not verified: a payment while the primary is down (by design, sends do not fail over); behaviour of the backup under load.
 
 Final counts at this point: server 177, web 93 (plus 9 opt-in smoke tests, 9 of 9 on the mock chain), library 74, SDK 4, storefront 8, Foundry 49 (not rerun).
+
+### 10e. Clean clone of the pushed repository (commit 03b7126)
+
+A fresh `git clone --recurse-submodules` of origin/main into a new folder on another drive, then `npm ci` (121 packages, 39 s), gave: invoice-lib 74, server 177, web 93 (+9 opt-in smoke tests, skipped by default), SDK 4, storefront 8, Foundry 49 (6 suites), all passing; the web build and the server and storefront typechecks are clean. So the repository reproduces from a clone without any local files, keys or running servers. Not covered: the live scripts (they need keys and a funded relayer) and anything that needs a browser or wallet.
