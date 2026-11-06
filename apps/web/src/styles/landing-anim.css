@@ -153,16 +153,6 @@
 .lab .link { display: inline-flex; align-items: center; gap: 6px; }
 
 /* ---------- Whitechain mark in 3D ---------- */
-.l-wc { padding: var(--s-9) 0; position: relative; overflow: hidden; }
-.wc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-7); align-items: center; }
-.wc__copy { display: flex; flex-direction: column; gap: var(--s-4); }
-.wc__copy h2 { font-size: var(--t-h2); line-height: 1.06; max-width: 18ch; background: linear-gradient(100deg, var(--p-ink) 0%, #0b3b8f 70%, #0066ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.wc__facts { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: flex; flex-direction: column; }
-.wc__facts li { display: flex; flex-direction: column; gap: 2px; padding: 14px 0; border-top: 1px solid var(--p-line); }
-.wc__facts li:last-child { border-bottom: 1px solid var(--p-line); }
-.wc__facts strong { font-weight: 500; }
-.wc__facts span, .wc__facts a { font-size: var(--t-small); color: var(--p-muted); }
-.wc__facts a { display: inline-flex; align-items: center; gap: 6px; color: var(--p-ink); }
 .wc__stage { position: relative; height: 460px; display: grid; place-items: center; perspective: 1100px; cursor: grab; touch-action: pan-y; }
 .wc__glow { position: absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(0, 102, 255, .28), rgba(0, 102, 255, 0) 62%); filter: blur(12px); }
 .wc__orbit { position: absolute; width: 420px; height: 420px; fill: none; stroke: rgba(8, 10, 40, .18); stroke-width: 1.2; stroke-dasharray: 3 7; }
@@ -190,7 +180,7 @@
 @keyframes wc-spin { from { transform: rotateX(8deg) rotateY(0deg); } to { transform: rotateX(8deg) rotateY(360deg); } }
 @keyframes wc-bob { 50% { transform: translateY(-10px); } }
 @keyframes wc-shadow { 0%, 50%, 100% { transform: scaleX(1); } 25%, 75% { transform: scaleX(.35); } }
-@media (max-width: 899px) { .wc { grid-template-columns: 1fr; } .wc__stage { height: 380px; } .wc__spin { width: 180px; height: 180px; } }
+@media (max-width: 899px) { .wc__stage { height: 380px; } .wc__spin { width: 180px; height: 180px; } }
 
 /* hero: headline on the left, the turning Whitechain mark on the right */
 .l-hero > .wrap.l-hero__top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--s-6); align-items: center; }
