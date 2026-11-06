@@ -156,6 +156,15 @@ export const sameAddress = (a?: string, b?: string) => !!a && !!b && a.toLowerCa
 export const isAddress = (v: string): v is `0x${string}` => /^0x[0-9a-fA-F]{40}$/.test(v);
 export const isHash = (v: string): v is `0x${string}` => /^0x[0-9a-fA-F]{64}$/.test(v);
 
+/** WBT with 6 places, for a single transaction's fee (a settlement costs about 0.001 WBT, which 4 places would round away). */
+export function formatWbtFine(wei: string | bigint): string {
+  const n = toBig(wei);
+  const unit = 10n ** 18n;
+  const whole = n / unit;
+  const frac = ((n % unit) * 1_000_000n) / unit;
+  return `${group(whole.toString())}.${frac.toString().padStart(6, '0')} WBT`;
+}
+
 /** WBT has 18 decimals; shown to 4 places for the ops panel */
 export function formatWbt(wei: string | bigint): string {
   const n = toBig(wei);
