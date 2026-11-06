@@ -4,8 +4,8 @@
 //   npm run e2e:api                     (terminal 2)
 //
 // Flow: create a signed invoice -> verify (PASS) -> a swapped-payout copy is refused and FAILS verification
-// -> the buyer authorizes once -> the relayer settles -> status, receipt link, CSV.
-// With a mock server nothing touches the chain. With CHAIN_MODE=testnet it makes one real 0.01 USDT payment.
+// -> the buyer authorizes once -> the relayer settles -> status, receipt link, CSV -> a capped refund of 20% to the buyer.
+// With a mock server nothing touches the chain. With CHAIN_MODE=testnet it makes one real 0.01 USDT payment and one refund.
 // Needs MERCHANT_PK and PAYER_PK (throwaway testnet keys, see .env.example). Keys are never printed.
 // The merchant key must be the wallet listed in fixtures/domains/northlight-design.example.json.
 
@@ -17,7 +17,9 @@ import {
   domainHash,
   invoiceHash,
   memoHash,
+  refundNonce,
   signInvoice,
+  signRefundAuthorization,
   signReceiveAuthorization,
   toWire,
   type Invoice,
@@ -124,6 +126,19 @@ async function main() {
   expect("CSV export has this invoice", csv.status === 200 && csv.text.includes(hash), `${csv.text.trim().split("\r\n").length - 1} row(s)`);
   const again = await call("POST", `/api/invoices/${hash}/authorize`, { mode: "now", from: auth.from, validAfter: "0", validBefore: auth.validBefore.toString(), v: auth.v, r: auth.r, s: auth.s });
   expect("a second payment is refused", again.status === 409 && again.json?.error?.code === "ALREADY_PAID");
+
+  // 6. Capped refund through the API: the payout wallet (here the merchant) signs, the relayer pays the gas, the contract pays only the buyer
+  const refundAmount = AMOUNT / 5n; // 20% of the payment
+  const refundCall = async (amount: bigint, refundedSoFar: bigint) => {
+    const m = await signRefundAuthorization(merchant, { settler: ctx.verifyingContract, amount, nonce: refundNonce(hash, refundedSoFar), validBefore: BigInt(Math.floor(Date.now() / 1000) + 3600) }, { chainId: ctx.chainId, token: TRACK_USDT });
+    return call("POST", `/api/invoices/${hash}/refund`, { amount: amount.toString(), from: m.from, validAfter: m.validAfter.toString(), validBefore: m.validBefore.toString(), v: m.v, r: m.r, s: m.s });
+  };
+  const refunded = await refundCall(refundAmount, 0n);
+  expect("payout wallet refunds part of it; the relayer pays the gas", refunded.status === 200 && refunded.json?.status === "REFUNDED" && refunded.json?.refunded === refundAmount.toString(), refunded.json?.txHash ? `${config.explorerBase}/tx/${refunded.json.txHash}` : refunded.text);
+  const afterRefund = (await call("GET", `/api/verify?hash=${hash}`)).json;
+  expect("the chain shows the refunded amount", afterRefund.onchain?.refunded === refundAmount.toString(), `refunded ${afterRefund.onchain?.refunded} of ${AMOUNT}`);
+  const tooMuch = await refundCall(AMOUNT, refundAmount); // more than what is left
+  expect("a refund above what is left is refused", tooMuch.status === 422 && tooMuch.json?.error?.code === "REFUND_EXCEEDS_PAID", tooMuch.json?.error?.code ?? tooMuch.text);
 
   console.log("\nOK: the API behaves end to end.");
 }
