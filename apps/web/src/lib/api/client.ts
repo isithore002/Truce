@@ -1,6 +1,6 @@
 import type {
   Address, ApiErrorBody, BuyerAuth, CancelSig, CreateInvoiceResult, Healthz, Hex, InvoiceDoc, InvoiceRecord,
-  HealthReason, InvoiceSummary, PublicConfig, VerifyResponse,
+  HealthReason, InvoiceSummary, PublicConfig, RefundRequest, RefundResult, VerifyResponse,
 } from './types';
 import type { ServerAuthorize, ServerConfig, ServerHealthz, ServerInvoice, ServerSummary } from './serverTypes';
 import { config } from '../config';
@@ -17,6 +17,8 @@ export interface TruceApi {
   /** PAID with the tx hash, or PENDING while the relayer waits for confirmation (poll getInvoice) */
   authorize(hash: Hex, auth: BuyerAuth): Promise<{ status: 'PAID' | 'PENDING' | 'SCHEDULED_OK'; txHash?: Hex }>;
   cancel(hash: Hex, sig: CancelSig): Promise<{ txHash: Hex }>;
+  /** Relays a refund the payout wallet signed. Needs a paid invoice; the chain enforces the payer and the cap. */
+  refund(hash: Hex, req: RefundRequest): Promise<RefundResult>;
   listMerchantInvoices(address: Address): Promise<InvoiceSummary[]>;
   exportCsv(address: Address): Promise<Blob>;
   healthz(): Promise<Healthz>;
@@ -86,6 +88,7 @@ export const httpApi: TruceApi = {
   authorize: (hash, auth) => request<ServerAuthorize>(`/api/invoices/${hash}/authorize`, post(auth)),
   // apps/server has no /cancel route yet (FRONTEND-REQUESTS.md R10); the 404 is shown as an error.
   cancel: (hash, sig) => request<{ txHash: Hex }>(`/api/invoices/${hash}/cancel`, post(sig)),
+  refund: (hash, req) => request<RefundResult>(`/api/invoices/${hash}/refund`, post(req)),
   listMerchantInvoices: async (address) =>
     (await request<{ items: ServerSummary[] }>(`/api/merchants/${address}/invoices`)).items.map(fromServer.summary),
   exportCsv: (address) => request<Blob>(`/api/merchants/${address}/export.csv`, {}, 'blob'),

@@ -4,6 +4,7 @@ import {
 } from './fixtures';
 import type { Check, CheckId, Hex, InvoiceDoc, InvoiceRecord, InvoiceSummary, VerifyResponse } from './types';
 import { CHECK_IDS, ZERO_ADDRESS } from './types';
+import { remainingToRefund } from '../refund';
 import { EXPLORER, explorerTx } from '../config';
 import { formatUsdt, isAddress, isHash, sameAddress } from '../format';
 import { randomHex } from '../invoiceLib';
@@ -139,7 +140,9 @@ export const mockApi: TruceApi = {
 
   async verifyHash(hash) {
     await wait(450);
-    return simulateVerify(get(hash).doc);
+    const r = get(hash);
+    // The on-chain section is what the refund panel reads. Mock mode has no chain, so it comes from the stored record.
+    return { ...simulateVerify(r.doc), onchain: { paid: r.status === 'PAID', payer: r.tx?.payer, refunded: r.refunded ?? '0', txHash: r.tx?.txHash } };
   },
 
   async verifyDoc(doc) {
@@ -183,6 +186,23 @@ export const mockApi: TruceApi = {
     const txHash = randomHex();
     persist({ ...r, status: 'CANCELLED', health: undefined, events: [...r.events, { at: new Date().toISOString(), type: 'cancelled', detail: 'Buyer cancelled the scheduled payment', txHash }] });
     return { txHash };
+  },
+
+  async refund(hash, req) {
+    await wait(700);
+    const r = get(hash);
+    if (r.status !== 'PAID') throw new ApiError('NOT_PAID', errorMessage('NOT_PAID'), 409);
+    if (!sameAddress(req.from, r.doc.invoice.payout)) throw new ApiError('AUTH_INVALID', errorMessage('AUTH_INVALID'), 422);
+    const amount = BigInt(req.amount);
+    const left = remainingToRefund(r.doc.invoice.amount, r.refunded ?? '0');
+    if (amount === 0n || amount > left) throw new ApiError('REFUND_EXCEEDS_PAID', errorMessage('REFUND_EXCEEDS_PAID'), 422);
+    const txHash = randomHex();
+    const refunded = BigInt(r.refunded ?? '0') + amount;
+    persist({
+      ...r, refunded: refunded.toString(),
+      events: [...r.events, { at: new Date().toISOString(), type: 'refunded', detail: `${formatUsdt(amount)} USDT returned to the original payer`, txHash }],
+    });
+    return { status: 'REFUNDED' as const, txHash, amount: amount.toString(), refunded: refunded.toString(), remaining: remainingToRefund(r.doc.invoice.amount, refunded).toString() };
   },
 
   async listMerchantInvoices(address) {

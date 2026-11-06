@@ -94,6 +94,26 @@ export interface BuyerAuth {
   s: Hex;
 }
 
+/** The payout wallet's signed refund (amount in USDT base units). The server relays it; the contract pays only the original payer. */
+export interface RefundRequest {
+  amount: string;
+  from: Address;
+  validAfter: string;
+  validBefore: string;
+  v: number;
+  r: Hex;
+  s: Hex;
+}
+
+export interface RefundResult {
+  status: 'REFUNDED' | 'PENDING';
+  txHash?: Hex;
+  /** Base units, as decimal strings. Absent while the transaction is still pending. */
+  amount?: string;
+  refunded?: string;
+  remaining?: string;
+}
+
 export interface CancelSig {
   v: number;
   r: Hex;

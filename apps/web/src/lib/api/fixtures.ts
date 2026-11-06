@@ -97,6 +97,8 @@ export interface MockRecord {
   listed: boolean;
   scenario?: ScenarioId;
   authorizeError?: string;
+  /** Total refunded so far, in USDT base units (mock only). */
+  refunded?: string;
 }
 
 function northlightDoc(seed: string, now: number, over: { due?: number; expiry?: number; client?: string; item?: string; amount?: string } = {}): InvoiceDoc {

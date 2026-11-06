@@ -5,11 +5,13 @@ import {
   invoiceTypedData as libInvoiceTypedData,
   memoHash as libMemoHash,
   receiveAuthorizationTypedData,
+  refundNonce as libRefundNonce,
+  signRefundAuthorization,
   splitSignature as libSplitSignature,
   type Invoice as LibInvoice,
   type PaymentMode,
 } from '@truce/invoice-lib';
-import { pad, toHex, type TypedDataDefinition } from 'viem';
+import { pad, toHex, type LocalAccount, type TypedDataDefinition } from 'viem';
 import type { Address, Hex, Invoice, InvoiceDetails } from './api/types';
 
 /**
@@ -59,6 +61,16 @@ export const invoiceLib = {
   cancelAuthorizationTypedData: (p: { token: Address; chainId: number; authorizer: Address; nonce: Hex }) =>
     libCancelTypedData({ authorizer: p.authorizer, nonce: p.nonce }, { chainId: p.chainId, token: p.token }) as unknown as TypedDataDefinition,
   splitSignature: (sig: Hex) => libSplitSignature(sig),
+  /** The EIP-3009 nonce the payout wallet must sign for the next refund (matches InvoiceSettler.refundNonce). */
+  refundNonce: (hash: Hex, refundedSoFar: bigint): Hex => libRefundNonce(hash, refundedSoFar),
+  /**
+   * The payout wallet's refund authorization, signed through the library. `sign` is the wallet prompt (typed data in,
+   * signature out); the library builds the message, so the browser never assembles the refund fields itself.
+   */
+  signRefund(p: { payout: Address; settler: Address; token: Address; chainId: number; hash: Hex; amount: bigint; refundedSoFar: bigint; validBefore: bigint; sign: (typed: TypedDataDefinition) => Promise<Hex> }) {
+    const account = { address: p.payout, signTypedData: (typed: unknown) => p.sign(typed as TypedDataDefinition) } as unknown as Pick<LocalAccount, 'address' | 'signTypedData'>;
+    return signRefundAuthorization(account, { settler: p.settler, amount: p.amount, nonce: libRefundNonce(p.hash, p.refundedSoFar), validBefore: p.validBefore }, { chainId: p.chainId, token: p.token });
+  },
 };
 
 /** Random hex for mock-only stand-ins (fake tx hashes, fake signatures). Not a hash of anything. */

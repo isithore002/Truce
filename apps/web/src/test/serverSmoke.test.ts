@@ -150,6 +150,41 @@ describe.skipIf(!run)('web client against apps/server', () => {
     expect(paid.tx?.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
   }, 60_000);
 
+  it('refunds part of a payment, then the rest, and refuses more than is left', async () => {
+    const { cfg, doc, hash } = await makeDoc(30 * DAY, 'Smoke refund');
+    await httpApi.createInvoice(doc);
+    const { typed, validAfter, validBefore } = invoiceLib.receiveWithAuthorizationTypedData({
+      invoice: doc.invoice, invoiceHash: hash, from: buyer.address, settler: cfg.settler, mode: 'now', chainId: cfg.chainId,
+    });
+    const sig = invoiceLib.splitSignature(await buyer.signTypedData(typed as never));
+    await httpApi.authorize(hash, { mode: 'now', from: buyer.address, validAfter, validBefore, ...sig });
+    await pollStatus(hash, 'PAID');
+
+    // The refund panel's own steps: read what was refunded from the chain, sign with the payout wallet through the seam, send.
+    const refundOnce = async (amount: bigint) => {
+      const before = BigInt((await httpApi.verifyHash(hash)).onchain?.refunded ?? '0');
+      const signed = await invoiceLib.signRefund({
+        payout: doc.invoice.payout, settler: cfg.settler, token: doc.invoice.token, chainId: cfg.chainId, hash, amount, refundedSoFar: before,
+        validBefore: BigInt(Math.floor(Date.now() / 1000) + 3600), sign: (t) => merchant.signTypedData(t as never),
+      });
+      return httpApi.refund(hash, { amount: amount.toString(), from: signed.from, validAfter: signed.validAfter.toString(), validBefore: signed.validBefore.toString(), v: signed.v, r: signed.r, s: signed.s });
+    };
+
+    const first = await refundOnce(4000n);
+    expect(first).toMatchObject({ status: 'REFUNDED', amount: '4000', refunded: '4000', remaining: '6000' });
+    expect(first.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    expect((await httpApi.verifyHash(hash)).onchain?.refunded).toBe('4000');
+
+    const tooMuch = await refundOnce(6001n).catch((e) => e);
+    expect(tooMuch).toBeInstanceOf(ApiError);
+    expect((tooMuch as ApiError).code).toBe('REFUND_EXCEEDS_PAID');
+
+    expect(await refundOnce(6000n)).toMatchObject({ status: 'REFUNDED', remaining: '0' });
+    const rec = await httpApi.getInvoice(hash);
+    expect(rec.events?.filter((e) => e.type === 'refunded').length).toBe(2);
+    expect(rec.status).toBe('PAID');
+  });
+
   it('pay on the due date, then cancel', async () => {
     const { cfg, doc, hash } = await makeDoc(10 * 60, 'Smoke scheduled');
     await httpApi.createInvoice(doc);
