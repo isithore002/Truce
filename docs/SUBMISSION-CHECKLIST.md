@@ -44,7 +44,7 @@ Write down anything that looks wrong. The README already says the click-through 
 
 ## 2. Record the video (2 to 4 minutes)
 
-Shot list and wording: `docs/design/E-SUBMISSION.md` section 2. Must show each party (merchant, buyer, relayer, verifier), the swapped-payout FAIL in the app, and the swapped-payout revert (`npm run e2e -- --attack-only` prints it). Say on screen and aloud that the data is **example data** and the due date is **time-compressed**. 720p or higher, your own voice, no speed-up. Keep a spare take of the attack and the payment. Record in server mode only (step 1).
+Shot list and wording: `docs/VIDEO-SCRIPT.md` (pre-flight list, shots, what to say; it replaces the drain-the-wallet scene in `docs/design/E-SUBMISSION.md` section 2, which was never run live). Must show each party (merchant, buyer, relayer, verifier), the swapped-payout FAIL in the app, and the swapped-payout revert (`npm run e2e -- --attack-only` prints it). Say on screen and aloud that the data is **example data** and the due date is **time-compressed**. 720p or higher, your own voice, no speed-up. Keep a spare take of the attack and the payment. Record in server mode only (step 1).
 
 ## 3. Check before you submit
 
