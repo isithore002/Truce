@@ -146,3 +146,9 @@ Still the biggest risk: no wallet screen, old or new, has been clicked in a real
 | ERP-style reading of the architecture | `docs/design/G-ERP-STYLE-VIEW.md`, with a list of what it does not claim | Documentation only |
 
 The ledger has only money entries, uses illustrative account names, and is not accounting software. Counts now: server 172, web 83 (+8 opt-in smoke tests, 8 of 8 passing), library 74, SDK 4, storefront 8, Foundry 49 (not rerun).
+
+### 10c. Merchant-side verdict preview (added after a real click-through showed the gap)
+
+When an invoice is created, the screen now runs the same check the buyer's page runs and shows "Your buyer will see PASS" or "Your buyer will see FAIL", with the failing checks and what to change. It was added because the first real browser run showed a merchant could create and share an invoice for a domain they did not control without being told it would fail. It reads the server's verify result and shows nothing the server did not say.
+
+Evidence: 7 unit tests for the "what to change" advice (including that an unreadable domain file gives one hint, not three), and a smoke test against the server that creates a valid and an unlisted-payout invoice and checks PASS with no hints, and FAIL with the payout hint (9 of 9 smoke tests pass on the mock chain). Not verified: the notice itself was not seen in a browser. For a series it checks the first invoice only.

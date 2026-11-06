@@ -29,7 +29,7 @@ Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...
 |---|---|---|
 | 1 | Home page loads | EXAMPLE DATA banner; no scenario switcher bar (that bar means you are still in mock mode) |
 | 2 | `/setup` -> connect the merchant account | Wallet asks to connect; domain `northlight-design.example` and payout = the signing wallet; "Download truce.json" works |
-| 3 | `/merchant` -> fill client name, one line item, a due date -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears |
+| 3 | `/merchant` -> fill client name, one line item, a due date -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears, with a notice above it. With the example merchant it says **"Your buyer will see PASS"** (10 of 10 checks). With a domain you do not control (for example `acme.com`) or the wrong wallet it says **"Your buyer will see FAIL, so do not send this link yet"**, lists the failing checks and what to change |
 | 4 | Open the link in the buyer profile (`/pay/...`) | Big PASS, ten checks, full payout wallet shown |
 | 5 | Connect the buyer wallet | Chain 1874 is added or switched to |
 | 6 | Pay now (keep `/merchant` open in a second window) | One signature prompt (no gas), progress, then paid with an explorer link and a "Network fee" row saying the relayer paid. In the second window the row flashes green and flips to Paid within about 4 seconds, without a reload |
