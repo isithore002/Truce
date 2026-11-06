@@ -39,3 +39,10 @@ Started 2026-11-06. Plan: `docs/prompts/AUTONOMOUS-RUN.md`. One line per task: i
 - Radar rerun 2026-11-06: 49 payment/invoice-like contracts since 2026-11-03. Domain/DNS verification flagged on 3: our two deployments and `MerchantRegistry 0xF6B60D212abd955a6d4937535f89B5B7b6426C47` (another entry: platform attestor records a domain after an off-chain DNS/.well-known check). Pitch unchanged; README "Overlap" paragraph states the difference without first/only claims. Also overlapping on features: PaymentRouter, PaymentProcessor, Checkout.
 - `npm run check:commits`: 106 commits, 0 over the limit.
 - `docs/SUBMISSION-CHECKLIST.md` written (browser click-through, video, submit). Nothing was submitted.
+
+## Phase 9: audit
+- Clean clone of origin/main: `npm ci` + `npm run test:all` all green (lib 74, server 137 then 143 after fixes, web 54, sdk 4, Foundry 49); builds and typechecks clean.
+- code-review (high) over c1..HEAD: 10 findings, 9 fixed with tests, 1 documented (merchant list needs no login) plus the JSON-store write cost documented. Server suite 143 after fixes.
+- Secrets scan of history: clean. All 9 README/feedback transactions confirmed `success` via Blockscout; both contracts verified.
+- Radar rerun and overlap note done in phase 8.
+- `docs/AUDIT.md` written. Verdict: READY WITH CAVEATS (browser click-through, video and submission are human steps).
