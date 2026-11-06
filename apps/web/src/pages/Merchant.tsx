@@ -94,6 +94,16 @@ export default function Merchant({ config }: { config?: Config }) {
     }
   }
 
+  async function onCollect(hash: string) {
+    setError(undefined);
+    try {
+      await api.collect(hash);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof ApiFailure ? e.message : "Could not trigger the collection.");
+    }
+  }
+
   async function copy(label: string, text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -164,6 +174,10 @@ export default function Merchant({ config }: { config?: Config }) {
                 <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
               </label>
               <label>
+                <span className="label">Or due in … minutes (demo, time-compressed)</span>
+                <input type="number" min={1} value={form.dueInMinutes} placeholder="for example 2" onChange={(e) => setForm({ ...form, dueInMinutes: e.target.value })} />
+              </label>
+              <label>
                 <span className="label">Payable for (days after due)</span>
                 <input type="number" min={1} max={365} value={form.validDays} onChange={(e) => setForm({ ...form, validDays: e.target.value })} />
               </label>
@@ -225,7 +239,7 @@ export default function Merchant({ config }: { config?: Config }) {
                 Download CSV
               </a>
             </div>
-            {items === undefined ? <p className="muted">Loading…</p> : <InvoiceTable items={items} explorerBase={config?.explorerBase ?? ""} />}
+            {items === undefined ? <p className="muted">Loading…</p> : <InvoiceTable items={items} explorerBase={config?.explorerBase ?? ""} onCollect={(h) => void onCollect(h)} />}
           </section>
         </>
       )}

@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import type { CheckId, InvoiceDocWire } from "@truce/invoice-lib";
 import type { InvoiceSummary, VerifyView } from "./api";
 import type { PinStatus } from "./pinning";
-import { formatDate, formatUsdt } from "./format";
+import { formatDate, formatDateTime, formatUsdt } from "./format";
+import { healthText, untilText } from "./schedule";
 import { navigate } from "./router";
 
 /** An in-app link that does not reload the page. */
@@ -143,7 +144,7 @@ export function StatusPill({ status }: { status: InvoiceSummary["status"] }) {
 }
 
 /** The merchant's invoice list: status, amount, dates, and links to the pay page and the payment on the explorer. */
-export function InvoiceTable({ items, explorerBase }: { items: InvoiceSummary[]; explorerBase: string }) {
+export function InvoiceTable({ items, explorerBase, nowSec = Math.floor(Date.now() / 1000), onCollect }: { items: InvoiceSummary[]; explorerBase: string; nowSec?: number; onCollect?: (hash: string) => void }) {
   if (items.length === 0) return <p className="muted">No invoices yet. Create the first one above.</p>;
   return (
     <div className="table-wrap">
@@ -167,6 +168,20 @@ export function InvoiceTable({ items, explorerBase }: { items: InvoiceSummary[];
               <td>{i.dueDate === "0" ? "On receipt" : formatDate(i.dueDate)}</td>
               <td>
                 <StatusPill status={i.status} />
+                {(i.status === "AT_RISK" || i.status === "FAILED") && i.healthReason && <div className="check-msg">{healthText(i.healthReason)}</div>}
+                {(i.status === "SCHEDULED_OK" || i.status === "AT_RISK") && i.collectAt && (
+                  <div className="check-msg">
+                    Collects {formatDateTime(i.collectAt)} ({untilText(Number(i.collectAt), nowSec)})
+                    {onCollect && Number(i.collectAt) < nowSec && (
+                      <>
+                        {" "}
+                        <button className="button secondary small" onClick={() => onCollect(i.hash)}>
+                          Collect now
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </td>
               <td>
                 <Link to={`/pay/${i.hash}`}>Pay page</Link> · <Link to={`/verify?hash=${i.hash}`}>Verify</Link>
@@ -233,4 +248,68 @@ export function PinWarning({
       )}
     </section>
   );
+}
+
+/** What happens to an invoice that is scheduled, failed or cancelled; shown on the buyer page and reused in tests. */
+export function ScheduleStatus({
+  status,
+  collectAt,
+  healthReason,
+  nowSec,
+  onCancel,
+  cancelBusy,
+  canCancel,
+}: {
+  status: InvoiceSummary["status"];
+  collectAt?: string;
+  healthReason?: string;
+  nowSec: number;
+  onCancel?: () => void;
+  cancelBusy?: boolean;
+  canCancel?: boolean;
+}) {
+  if (status === "SCHEDULED_OK" || status === "AT_RISK") {
+    const atRisk = status === "AT_RISK";
+    return (
+      <section className={`card schedule ${atRisk ? "at-risk" : ""}`} data-status={status}>
+        <h2>
+          Payment scheduled <StatusPill status={status} />
+        </h2>
+        {collectAt && (
+          <p>
+            The payment will be collected on <strong>{formatDateTime(collectAt)}</strong> ({untilText(Number(collectAt), nowSec)}).
+          </p>
+        )}
+        <p className={atRisk ? "risk-text" : "muted"}>{healthText(healthReason)}</p>
+        <p className="hint">Your authorization is a commitment, not locked funds. If the balance is short on the due date, the payment fails and the invoice shows Failed.</p>
+        {canCancel && onCancel && (
+          <button className="button secondary" onClick={onCancel} disabled={cancelBusy}>
+            {cancelBusy ? "Confirm in your wallet…" : "Cancel my authorization"}
+          </button>
+        )}
+      </section>
+    );
+  }
+  if (status === "FAILED") {
+    return (
+      <section className="card failed" data-status="FAILED">
+        <h2>
+          Collection failed <StatusPill status="FAILED" />
+        </h2>
+        <p>{healthText(healthReason === "NONE" || healthReason === undefined ? "WINDOW_ENDED" : healthReason)}</p>
+        <p className="hint">Nothing was paid. The merchant can send a new invoice.</p>
+      </section>
+    );
+  }
+  if (status === "CANCELLED") {
+    return (
+      <section className="card failed" data-status="CANCELLED">
+        <h2>
+          Authorization cancelled <StatusPill status="CANCELLED" />
+        </h2>
+        <p>The buyer cancelled the payment authorization. Nothing was paid, and it can no longer be used.</p>
+      </section>
+    );
+  }
+  return null;
 }

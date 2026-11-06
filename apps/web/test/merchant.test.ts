@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_FORM, EXAMPLE_FORM, EXAMPLE_SETTINGS, checkForm, domainFileText, dueDateToUnix, formTotal, loadSettings, saveSettings } from "../src/merchantLogic";
+import { resolveDueDate, EMPTY_FORM, EXAMPLE_FORM, EXAMPLE_SETTINGS, checkForm, domainFileText, dueDateToUnix, formTotal, loadSettings, saveSettings } from "../src/merchantLogic";
 
 const wallet = "0x19d47570BA52E058bD6432009b2705F799b851Dc";
 
@@ -61,5 +61,22 @@ describe("settings storage", () => {
     mem.set("truce.merchant.settings", "{not json");
     expect(loadSettings(storage, EXAMPLE_SETTINGS)).toEqual(EXAMPLE_SETTINGS);
     expect(loadSettings(undefined, EXAMPLE_SETTINGS)).toEqual(EXAMPLE_SETTINGS);
+  });
+});
+
+describe("resolveDueDate", () => {
+  it("uses minutes-from-now for demos, a calendar date otherwise, and on receipt when empty", () => {
+    expect(resolveDueDate({ dueDate: "", dueInMinutes: "2" }, 1000)).toBe(1120);
+    expect(resolveDueDate({ dueDate: "2026-01-01", dueInMinutes: "" }, 1000)).toBe(1_767_225_600);
+    expect(resolveDueDate({ dueDate: "2026-01-01", dueInMinutes: "5" }, 1000)).toBe(1300); // minutes win
+    expect(resolveDueDate({ dueDate: "", dueInMinutes: "" }, 1000)).toBe(0);
+  });
+  it("rejects nonsense minutes", () => {
+    for (const bad of ["0", "-3", "1.5", "abc", "999999"]) expect(() => resolveDueDate({ dueDate: "", dueInMinutes: bad }, 1)).toThrow(/minutes/);
+  });
+  it("flows into the invoice", () => {
+    const { invoice } = checkForm({ ...EXAMPLE_FORM, dueInMinutes: "3" }, EXAMPLE_SETTINGS, wallet, true, 1_767_000_000);
+    expect(invoice.dueDate).toBe(1_767_000_180n);
+    expect(invoice.expiry).toBe(BigInt(1_767_000_180 + 30 * 86_400));
   });
 });

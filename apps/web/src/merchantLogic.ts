@@ -13,6 +13,8 @@ export interface InvoiceForm {
   notes: string;
   /** yyyy-mm-dd in UTC, or empty for "on receipt". */
   dueDate: string;
+  /** Demo shortcut: due this many minutes from now (time-compressed). Overrides the date when set. */
+  dueInMinutes: string;
   validDays: string;
   /** Only this wallet may pay; empty means anyone. */
   payer: string;
@@ -32,6 +34,7 @@ export const EMPTY_FORM: InvoiceForm = {
   lines: [{ description: "", quantity: "1", unitPrice: "" }],
   notes: "",
   dueDate: "",
+  dueInMinutes: "",
   validDays: "30",
   payer: "",
 };
@@ -41,6 +44,7 @@ export const EXAMPLE_FORM: InvoiceForm = {
   lines: [{ description: "Brand identity (EXAMPLE DATA)", quantity: "1", unitPrice: "1250" }],
   notes: "EXAMPLE DATA. Net 30, time-compressed for the demo.",
   dueDate: "",
+  dueInMinutes: "",
   validDays: "30",
   payer: "",
 };
@@ -68,8 +72,19 @@ export function dueDateToUnix(date: string): number {
   return Math.floor(ms / 1000);
 }
 
+/** Due date as unix seconds: minutes-from-now (demo) wins over a calendar date; empty means on receipt (0). */
+export function resolveDueDate(form: Pick<InvoiceForm, "dueDate" | "dueInMinutes">, nowSec: number): number {
+  const mins = form.dueInMinutes.trim();
+  if (mins) {
+    if (!/^\d{1,5}$/.test(mins) || Number(mins) < 1) throw new Error("Enter the minutes until the due date as a whole number, or leave it blank.");
+    return nowSec + Number(mins) * 60;
+  }
+  return dueDateToUnix(form.dueDate);
+}
+
 export function formToInput(form: InvoiceForm, settings: MerchantSettings, merchant: Address, example: boolean, now?: number): InvoiceInput {
   const validDays = Number(form.validDays);
+  const nowSec = now ?? Math.floor(Date.now() / 1000);
   return {
     merchant,
     payout: (settings.payout.trim() || undefined) as Address | undefined,
@@ -78,7 +93,7 @@ export function formToInput(form: InvoiceForm, settings: MerchantSettings, merch
     clientName: form.clientName,
     lineItems: form.lines,
     notes: form.notes,
-    dueDate: dueDateToUnix(form.dueDate),
+    dueDate: resolveDueDate(form, nowSec),
     validDays: Number.isFinite(validDays) ? validDays : NaN,
     payer: (form.payer.trim() || undefined) as Address | undefined,
     example,

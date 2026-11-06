@@ -21,6 +21,8 @@ export interface InvoiceEvent {
 export interface InvoiceView {
   doc: InvoiceDocWire;
   status: InvoiceStatus;
+  health?: { reason: string; checkedAt: number };
+  schedule?: { validAfter: string; validBefore: string };
   payment?: { payer: Address; paidAt: number; txHash?: Hex };
   events: InvoiceEvent[];
 }
@@ -43,10 +45,19 @@ export interface InvoiceSummary {
   dueDate: string;
   expiry: string;
   status: InvoiceStatus;
+  healthReason?: string;
+  collectAt?: string;
   txHash?: Hex;
   paidAt?: number;
   createdAt: number;
   example: boolean;
+}
+
+export interface HealthView {
+  status: InvoiceStatus;
+  scheduled: boolean;
+  collectAt?: string;
+  health?: { ok: boolean; reason: string; balance: string; checkedAt: number; note: string };
 }
 
 export interface AuthorizeBody {
@@ -96,7 +107,10 @@ export const api = {
   invoice: (hash: string) => request<InvoiceView>("GET", `/api/invoices/${hash}`),
   verifyHash: (hash: string, buyer?: string) => request<VerifyView>("GET", `/api/verify?hash=${hash}${buyer ? `&buyer=${buyer}` : ""}`),
   verifyDoc: (doc: unknown, buyer?: string) => request<VerifyView>("POST", `/api/verify${buyer ? `?buyer=${buyer}` : ""}`, doc),
-  authorize: (hash: string, body: AuthorizeBody) => request<{ status: "PAID" | "PENDING"; txHash?: Hex }>("POST", `/api/invoices/${hash}/authorize`, body),
+  authorize: (hash: string, body: AuthorizeBody) => request<{ status: "PAID" | "PENDING" | "SCHEDULED_OK"; txHash?: Hex; collectAt?: string }>("POST", `/api/invoices/${hash}/authorize`, body),
+  health: (hash: string) => request<HealthView>("GET", `/api/invoices/${hash}/health`),
+  cancel: (hash: string, sig: { v: number; r: Hex; s: Hex }) => request<{ status: "CANCELLED"; txHash: Hex }>("POST", `/api/invoices/${hash}/cancel`, sig),
+  collect: (hash: string) => request<{ result: string; status: InvoiceStatus }>("POST", `/api/invoices/${hash}/collect`),
   merchantInvoices: (address: string) => request<{ items: InvoiceSummary[] }>("GET", `/api/merchants/${address}/invoices`),
   createInvoice: (doc: unknown) => request<{ hash: Hex; link: string }>("POST", "/api/invoices", doc),
   csvUrl: (address: string) => `/api/merchants/${address}/export.csv`,

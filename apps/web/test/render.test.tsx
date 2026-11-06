@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { InvoiceDocWire } from "@truce/invoice-lib";
 import type { InvoiceSummary, VerifyView } from "../src/api";
-import { Checklist, ExampleTag, InvoiceCard, InvoiceTable, PinWarning } from "../src/components";
+import { Checklist, ExampleTag, InvoiceCard, InvoiceTable, PinWarning, ScheduleStatus } from "../src/components";
 import Merchant from "../src/pages/Merchant";
 
 const ids = [
@@ -171,5 +171,46 @@ describe("PinWarning", () => {
     const html = renderToStaticMarkup(<PinWarning pin={{ status: "changed", pin, signerChanged: true, payoutChanged: true }} domain="a.example" invoice={inv} />);
     expect(html).toContain("Both the signing wallet and the payout wallet");
     expect(html).not.toContain("checkbox");
+  });
+});
+
+describe("ScheduleStatus", () => {
+  const due = "1800000600";
+  it("shows when the payment will be collected, the health, the snapshot caveat and a cancel button", () => {
+    const html = renderToStaticMarkup(<ScheduleStatus status="SCHEDULED_OK" collectAt={due} healthReason="NONE" nowSec={1800000000} canCancel onCancel={() => undefined} />);
+    expect(html).toContain("Payment scheduled");
+    expect(html).toContain("in 10 minutes");
+    expect(html).toContain("snapshot, not a lock");
+    expect(html).toContain("commitment, not locked funds");
+    expect(html).toContain("Cancel my authorization");
+  });
+  it("warns when the buyer's balance is too low", () => {
+    const html = renderToStaticMarkup(<ScheduleStatus status="AT_RISK" collectAt={due} healthReason="LOW_BALANCE" nowSec={1800000000} />);
+    expect(html).toContain("At risk");
+    expect(html).toContain("below the invoice amount");
+    expect(html).toContain("at-risk");
+    expect(html).not.toContain("Cancel my authorization");
+  });
+  it("shows a clear Failed state and a Cancelled state", () => {
+    const failed = renderToStaticMarkup(<ScheduleStatus status="FAILED" healthReason="LOW_BALANCE" nowSec={1} />);
+    expect(failed).toContain("Collection failed");
+    expect(failed).toContain("Nothing was paid");
+    expect(renderToStaticMarkup(<ScheduleStatus status="FAILED" nowSec={1} />)).toContain("payment window ended");
+    expect(renderToStaticMarkup(<ScheduleStatus status="CANCELLED" nowSec={1} />)).toContain("can no longer be used");
+  });
+  it("renders nothing for an ordinary issued invoice", () => {
+    expect(renderToStaticMarkup(<ScheduleStatus status="ISSUED" nowSec={1} />)).toBe("");
+  });
+});
+
+describe("InvoiceTable with scheduled invoices", () => {
+  const base = { hash: "0x" + "ab".repeat(32), clientName: "Beta Labs", amount: "1000000", dueDate: "1800000600", status: "AT_RISK", healthReason: "LOW_BALANCE", collectAt: "1800000600", example: false } as unknown as InvoiceSummary;
+  it("shows the collection time, the risk reason, and Collect now only after the due time", () => {
+    const early = renderToStaticMarkup(<InvoiceTable items={[base]} explorerBase="https://e" nowSec={1800000000} onCollect={() => undefined} />);
+    expect(early).toContain("below the invoice amount");
+    expect(early).toContain("Collects");
+    expect(early).not.toContain("Collect now");
+    const late = renderToStaticMarkup(<InvoiceTable items={[base]} explorerBase="https://e" nowSec={1800000700} onCollect={() => undefined} />);
+    expect(late).toContain("Collect now");
   });
 });

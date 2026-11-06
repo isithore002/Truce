@@ -107,3 +107,11 @@ pre.file { background: #0f1420; color: #e6edf7; border-radius: 8px; padding: 0.8
 .pin-compare { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 .pin-compare .wallet { margin: 0.2rem 0; font-weight: 500; font-size: 0.85rem; }
 .ack { display: block; margin-top: 0.8rem; font-weight: 650; }
+
+.schedule.at-risk { border-color: #e0b800; background: var(--warn-bg); }
+.risk-text { color: #7a4b00; font-weight: 650; }
+.card.failed { border-color: var(--fail); background: var(--fail-bg); }
+.mode-choice { display: grid; gap: 0.5rem; margin: 0.6rem 0; }
+.mode-choice label { display: flex; gap: 0.5rem; align-items: flex-start; font-weight: 600; }
+
+.button.small { font-size: 0.8rem; padding: 0.15rem 0.6rem; border-width: 1px; }
