@@ -32,3 +32,10 @@ Started 2026-11-06. Plan: `docs/prompts/AUTONOMOUS-RUN.md`. One line per task: i
 - Tests: server 137 (due.test.ts 28), web 51, lib 74.
 - LIVE on the new contract: `npm run e2e:due` (new): invoice A scheduled ~70 s ahead and collected by the scheduler (tx 0xe4f4df28...6882); invoice B scheduled then cancelled by a buyer-signed CancelAuthorization relayed on chain (tx 0xe8fce82e...3c2a), never collected; health snapshot OK for both.
 - Not live-tested: AT_RISK/FAILED paths (needs draining the real buyer wallet); they are covered with the mock chain and a fake clock.
+
+## Phase 6 to 8: Soul badge, docs, submission prep
+- T31 mocked Soul badge: exact wording, example mode only, tooltip says it says nothing about the business; tests check the string and absence outside example mode. Web tests 54.
+- README rewritten (limitations, live links, run steps, overlap), WHITECHAIN_FEEDBACK additions, AI-USE account, C-TECHNICAL notes, CLAUDE.md status. Tag `c5` set after this phase.
+- Radar rerun 2026-11-06: 49 payment/invoice-like contracts since 2026-11-03. Domain/DNS verification flagged on 3: our two deployments and `MerchantRegistry 0xF6B60D212abd955a6d4937535f89B5B7b6426C47` (another entry: platform attestor records a domain after an off-chain DNS/.well-known check). Pitch unchanged; README "Overlap" paragraph states the difference without first/only claims. Also overlapping on features: PaymentRouter, PaymentProcessor, Checkout.
+- `npm run check:commits`: 106 commits, 0 over the limit.
+- `docs/SUBMISSION-CHECKLIST.md` written (browser click-through, video, submit). Nothing was submitted.

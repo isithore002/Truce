@@ -85,6 +85,10 @@ The domain file and the PASS/FAIL check are for the buyer's eyes. They do not he
 - Library (74), server (137, including a fake-clock scheduler suite and SSRF tests), web (54), SDK (4).
 - Live scripts above, each recorded with explorer links.
 
+## Overlap with other entries
+
+Other entries on the same testnet also do merchant-signed invoices, EIP-3009 pulls and refunds (for example `PaymentRouter`, `PaymentProcessor`, `Checkout`). At least one (`MerchantRegistry` `0xF6B6...6C47`) records domain verification through a platform attestor after an off-chain DNS or .well-known check. Truce's difference is where that trust sits: the buyer's own check reads the merchant's published file directly with no platform in between, and the contract enforces the signed payout wallet at settlement. We read other teams' contracts only to assess overlap; ours was written from scratch. Competitor scan run on 2026-11-06 with `npm run radar`.
+
 ## Limitations (please read)
 
 - **A signed authorization is a commitment, not locked funds.** On the due date the buyer's balance may be too low; then the collection fails and the invoice shows Failed. The balance and health check is a **snapshot, not a lock**.
