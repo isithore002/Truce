@@ -174,10 +174,10 @@ export function PayPage() {
             <section className="card stack" aria-labelledby="sched-title">
               <h3 id="sched-title">Scheduled payment</h3>
               {record.status === 'AT_RISK' && (
-                <div className="notice notice--warn" aria-live="polite"><Icon name="alert" /><p><strong>At risk.</strong> {HEALTH_MESSAGES[record.health?.reason ?? 'LOW_BALANCE']} Top up before the due date.</p></div>
+                <div className="notice notice--warn" aria-live="polite"><Icon name="alert" /><p><strong>At risk.</strong> {HEALTH_MESSAGES[record.health?.reason ?? 'LOW_BALANCE']} Top up before the due date. The collection is tried again automatically until the payment window closes.</p></div>
               )}
               {record.status === 'FAILED' && (
-                <div className="notice notice--bad" aria-live="polite"><Icon name="x" /><p><strong>Collection failed.</strong> {HEALTH_MESSAGES[record.health?.reason ?? 'LOW_BALANCE']} It retries automatically until the payment window closes.</p></div>
+                <div className="notice notice--bad" aria-live="polite"><Icon name="x" /><p><strong>Collection failed.</strong> {HEALTH_MESSAGES[record.health?.reason ?? 'LOW_BALANCE']} It will not be tried again, and nothing was taken from your wallet. Ask the merchant for a new invoice.</p></div>
               )}
               {record.status === 'SCHEDULED_OK' && <p className="small">{HEALTH_MESSAGES.NONE}</p>}
               {error && <div className="notice notice--bad" role="alert"><Icon name="alert" /><p>{error}</p></div>}

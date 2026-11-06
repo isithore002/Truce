@@ -92,7 +92,7 @@ export const STATUS_BADGES: Record<Status, { label: string; tone: Tone; text: st
   SCHEDULED_OK: { label: 'Scheduled', tone: 'info', text: 'Signed to be collected on the due date. The last balance check passed.' },
   AT_RISK: { label: 'At risk', tone: 'warn', text: 'Signed to be collected on the due date, but the last check found a problem.' },
   PAID: { label: 'Paid', tone: 'ok', text: 'Settled on chain to the signed payout wallet.' },
-  FAILED: { label: 'Failed', tone: 'bad', text: 'Collection failed on the due date. It retries until the payment window closes.' },
+  FAILED: { label: 'Failed', tone: 'bad', text: 'Collection failed and will not be tried again: the payment window ended or the signed payment can no longer be used. Nothing was taken.' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral', text: 'The buyer cancelled the scheduled payment.' },
   EXPIRED: { label: 'Expired', tone: 'neutral', text: 'The payment window closed without payment.' },
 };
