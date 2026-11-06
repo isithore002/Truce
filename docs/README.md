@@ -24,6 +24,7 @@
 
 ## Submission and review
 - `SUBMISSION-CHECKLIST.md`: the human steps (browser click-through, video, submit) with expected results
+- `DEPLOY-VERCEL.md`: hosting the web app on Vercel (demo mode, or with an API on a host that keeps a process running) and its limits
 - `VIDEO-SCRIPT.md`: shot list, narration and recovery notes for the 2 to 4 minute video
 - `AUDIT.md`: what was verified, on chain and in tests, and what was not
 - `AUTONOMOUS-LOG.md`: log of the autonomous build run
