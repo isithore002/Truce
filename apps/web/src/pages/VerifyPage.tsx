@@ -10,6 +10,7 @@ import { VerificationChecklist } from '../components/verify/VerificationChecklis
 import { SCENARIOS, scenarioHash } from '../lib/api/fixtures';
 import { config } from '../lib/config';
 import { encodeDoc, parseVerifyInput } from '../lib/doclink';
+import { errorMessage } from '../lib/messages';
 
 /** Public verify page: no wallet. Paste a payment link or a hash, see PASS or FAIL and the payment status. */
 /** The ten checks, grouped for the empty state. Wording mirrors lib/messages; the real results come from invoice-lib. */
@@ -115,6 +116,11 @@ export function VerifyPage() {
         <div className="state" role="alert">
           <h2>We could not check this invoice</h2>
           <p className="muted">{v.error}</p>
+          {target.kind === 'hash' && v.error === errorMessage('NOT_FOUND') && (
+            <p className="small muted">
+              A bare 0x… value must be the invoice hash. The “Invoice id” shown in an invoice panel is a different value and will not be found here. Use the payment link instead: open the invoice and choose “Copy payment link”, or “Open the public record”.
+            </p>
+          )}
           <button type="button" className="btn btn--secondary" onClick={v.retry}><Icon name="refresh" size={18} />Try again</button>
         </div>
       )}
