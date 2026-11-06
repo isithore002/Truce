@@ -13,6 +13,7 @@ import type { Hex } from 'viem';
 import { describe, expect, it } from 'vitest';
 import { ApiError, httpApi } from '../lib/api/client';
 import { invoiceLib } from '../lib/invoiceLib';
+import { monthlyDueDates, seriesNote } from '../lib/series';
 import { ZERO_ADDRESS, type Address, type Invoice, type InvoiceDetails, type InvoiceDoc } from '../lib/api/types';
 
 const run = !!process.env.SMOKE_API;
@@ -30,14 +31,14 @@ describe.skipIf(!run)('web client against apps/server', () => {
   const merchant = run ? account('MERCHANT_PK') : undefined!;
   const buyer = run ? account('PAYER_PK') : undefined!;
 
-  async function makeDoc(dueInSeconds: number, label: string, payout?: Address) {
+  async function makeDoc(dueInSeconds: number, label: string, payout?: Address, over: { dueAt?: number; notes?: string } = {}) {
     const cfg = await httpApi.getConfig();
     const details: InvoiceDetails = {
       merchantName: 'Northlight Design Studio', clientName: 'Beta Labs',
       lineItems: [{ description: `${label} (EXAMPLE DATA)`, quantity: '1', unitPrice: '10000' }],
-      notes: 'EXAMPLE DATA. Smoke test.', example: true,
+      notes: over.notes ?? 'EXAMPLE DATA. Smoke test.', example: true,
     };
-    const due = Math.floor(Date.now() / 1000) + dueInSeconds;
+    const due = over.dueAt ?? Math.floor(Date.now() / 1000) + dueInSeconds;
     const invoice: Invoice = {
       invoiceId: invoiceLib.newInvoiceId(), merchant: merchant.address, payout: payout ?? (await payoutFromDomain()), token: cfg.token,
       amount: '10000', dueDate: String(due), expiry: String(due + DAY), payer: ZERO_ADDRESS,
@@ -183,6 +184,27 @@ describe.skipIf(!run)('web client against apps/server', () => {
     const rec = await httpApi.getInvoice(hash);
     expect(rec.events?.filter((e) => e.type === 'refunded').length).toBe(2);
     expect(rec.status).toBe('PAID');
+  });
+
+  it('a monthly series makes separate, individually verifiable invoices with their own dates and notes', async () => {
+    const first = Math.floor(Date.now() / 1000 / 86400) * 86400 + 30 * 86400; // midnight UTC, 30 days out
+    const dues = monthlyDueDates(first, 3);
+    const hashes: string[] = [];
+    for (const [i, dueAt] of dues.entries()) {
+      const { doc, hash } = await makeDoc(0, `Smoke series ${i + 1}`, undefined, { dueAt: Number(dueAt), notes: seriesNote('Net 30', i, dues.length) });
+      expect((await httpApi.createInvoice(doc)).hash).toBe(hash);
+      hashes.push(hash);
+    }
+    expect(new Set(hashes).size).toBe(3); // three different invoices, not one repeated
+    for (const [i, hash] of hashes.entries()) {
+      const rec = await httpApi.getInvoice(hash as Hex);
+      expect(rec.status).toBe('ISSUED');
+      expect(rec.doc.invoice.dueDate).toBe(dues[i]);
+      expect(rec.doc.details.notes).toBe(`Net 30 · Invoice ${i + 1} of 3`);
+      expect((await httpApi.verifyHash(hash as Hex)).result).toBe('PASS');
+    }
+    expect(Number(dues[1])).toBeGreaterThan(Number(dues[0]));
+    expect(Number(dues[2])).toBeGreaterThan(Number(dues[1]));
   });
 
   it('pay on the due date, then cancel', async () => {

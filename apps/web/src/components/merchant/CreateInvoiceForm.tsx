@@ -5,10 +5,11 @@ import { api, ApiError } from '../../lib/api';
 import type { Address, CreateInvoiceResult, Invoice, InvoiceDetails } from '../../lib/api/types';
 import { ZERO_ADDRESS } from '../../lib/api/types';
 import { chain } from '../../lib/config';
-import { dateInputToUnix, formatUsdt, isAddress, MAX_DEMO_MINUTES, nowSeconds, parseDemoMinutes, parseQuantity, parseUsdt, unixToDateInput } from '../../lib/format';
+import { dateInputToUnix, formatDue, formatUsdt, isAddress, MAX_DEMO_MINUTES, nowSeconds, parseDemoMinutes, parseQuantity, parseUsdt, unixToDateInput } from '../../lib/format';
 import { invoiceLib } from '../../lib/invoiceLib';
 import { loadSetup } from '../../lib/merchantSetup';
 import { errorMessage } from '../../lib/messages';
+import { MAX_SERIES, monthlyDueDates, parseSeriesCount, seriesNote } from '../../lib/series';
 import { signTypedData } from '../../lib/wallet';
 import { Icon } from '../Icon';
 
@@ -31,7 +32,9 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const [result, setResult] = useState<CreateInvoiceResult>();
+  const [seriesCount, setSeriesCount] = useState('1');
+  // Everything created so far. A series can stop partway (a rejected signature, a network error), so each one is kept as it lands.
+  const [created, setCreated] = useState<{ res: CreateInvoiceResult; due: string; index: number; of: number }[]>([]);
   const [todaySec] = useState(() => Math.floor(Date.now() / 1000));
 
   const parsed = lines.map((l) => ({ q: parseQuantity(l.quantity), p: parseUsdt(l.price), d: l.description.trim() }));
@@ -40,6 +43,7 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
   const demoOn = example && demoMinutes.trim() !== '';
   const minutesN = parseDemoMinutes(demoMinutes);
   const dateUnix = dateInputToUnix(due);
+  const seriesN = parseSeriesCount(seriesCount);
   const graceN = /^\d+$/.test(grace) ? Number(grace) : NaN;
   const errors = {
     client: client.trim() ? undefined : 'Enter the client name',
@@ -49,6 +53,7 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
       : !dateUnix ? 'Pick a due date' : Number(dateUnix) < todaySec - DAY ? 'The due date is in the past' : undefined,
     // A scheduled payment needs a window after the due time: with 0 days the invoice expires the moment it is due.
     grace: Number.isNaN(graceN) || graceN < 0 || graceN > 90 ? 'Grace is 0 to 90 days' : demoOn && graceN < 1 ? 'Use at least 1 day so the scheduled payment has time to run' : undefined,
+    series: demoOn ? (seriesN === 1 ? undefined : 'A series needs a calendar due date. Clear the demo minutes or set the number to 1') : seriesN ? undefined : `Enter a whole number from 1 to ${MAX_SERIES}`,
     payer: payer.trim() && !isAddress(payer.trim()) ? 'Enter a wallet address or leave empty' : undefined,
     setup: !setup.domain || !isAddress(setup.payout) ? 'Finish setup first: domain and payout wallet' : undefined,
   };
@@ -67,22 +72,33 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
       if (!(await app.switchChain())) throw new Error('Switch your wallet to Whitechain Sepolia (chain 1874).');
       const cfg = app.publicConfig;
       if (!cfg) throw new Error('Server settings are not loaded yet. Try again in a moment.');
-      const details: InvoiceDetails = {
-        merchantName: setup.name, clientName: client.trim(),
-        lineItems: parsed.map((l) => ({ description: l.d, quantity: (l.q as { value: bigint }).value.toString(), unitPrice: (l.p as { value: bigint }).value.toString() })),
-        notes: notes.trim(), example,
-      };
+      const lineItems = parsed.map((l) => ({ description: l.d, quantity: (l.q as { value: bigint }).value.toString(), unitPrice: (l.p as { value: bigint }).value.toString() }));
       // The clock is read here, at signing time, so a minutes field typed a while ago still means "N minutes from now".
-      const dueAt = demoOn ? (minutesN ? String(nowSeconds() + minutesN * 60) : null) : dateUnix;
-      if (!dueAt) throw new Error('Check the due date.');
-      const invoice: Invoice = {
-        invoiceId: invoiceLib.newInvoiceId(), merchant, payout: setup.payout as Address, token: cfg.token, amount: total.toString(),
-        dueDate: dueAt, expiry: String(Number(dueAt) + graceN * DAY), payer: (payer.trim() || ZERO_ADDRESS) as Address,
-        domainHash: invoiceLib.domainHash(setup.domain), memoHash: invoiceLib.memoHash(details),
-      };
-      const signature = await signTypedData(merchant, invoiceLib.invoiceTypedData(invoice, { chainId: cfg.chainId ?? chain.id, settler: cfg.settler }));
-      const res = await api.createInvoice({ version: 1, invoice, signature, domain: setup.domain, details });
-      setResult(res);
+      const firstDue = demoOn ? (minutesN ? String(nowSeconds() + minutesN * 60) : null) : dateUnix;
+      if (!firstDue) throw new Error('Check the due date.');
+      const dues = monthlyDueDates(firstDue, demoOn ? 1 : (seriesN ?? 1));
+      const ctx = { chainId: cfg.chainId ?? chain.id, settler: cfg.settler };
+      setCreated([]);
+      // One signature and one request per invoice, in order. Each invoice that is made stays made if a later one fails.
+      for (const [i, dueAt] of dues.entries()) {
+        const details: InvoiceDetails = { merchantName: setup.name, clientName: client.trim(), lineItems, notes: seriesNote(notes.trim(), i, dues.length), example };
+        const invoice: Invoice = {
+          invoiceId: invoiceLib.newInvoiceId(), merchant, payout: setup.payout as Address, token: cfg.token, amount: total.toString(),
+          dueDate: dueAt, expiry: String(Number(dueAt) + graceN * DAY), payer: (payer.trim() || ZERO_ADDRESS) as Address,
+          domainHash: invoiceLib.domainHash(setup.domain), memoHash: invoiceLib.memoHash(details),
+        };
+        let res: CreateInvoiceResult;
+        try {
+          const signature = await signTypedData(merchant, invoiceLib.invoiceTypedData(invoice, ctx));
+          res = await api.createInvoice({ version: 1, invoice, signature, domain: setup.domain, details });
+        } catch (err) {
+          if (i === 0) throw err;
+          onCreated();
+          const why = err instanceof ApiError ? errorMessage(err.code, err.message) : (err as Error).message;
+          throw new Error(`Created ${i} of ${dues.length}. Invoice ${i + 1} was not created: ${why} The ones already made are listed above and on your dashboard.`);
+        }
+        setCreated((c) => [...c, { res, due: dueAt, index: i, of: dues.length }]);
+      }
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? errorMessage(err.code, err.message) : (err as Error).message);
@@ -91,21 +107,32 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
     }
   }
 
-  if (result) {
+  if (created.length > 0) {
+    const of = created[0].of;
+    const many = of > 1;
+    const reset = () => { setCreated([]); setError(undefined); setTouched(false); setClient(''); setSeriesCount('1'); setLines([{ description: '', quantity: '1', price: '' }]); };
     return (
       <section className="card stack" aria-live="polite">
-        <span className="badge badge--ok" style={{ alignSelf: 'flex-start' }}><Icon name="check" />Invoice created</span>
-        <h2>Send this payment link</h2>
-        <div className="row" style={{ flexWrap: 'nowrap' }}>
-          <input className="input input--mono grow" readOnly value={result.link} aria-label="Payment link" onFocus={(e) => e.target.select()} />
-          <button type="button" className="btn btn--primary" style={{ height: 48 }} onClick={() => void navigator.clipboard?.writeText(result.link).then(() => app.toast('Link copied'))}>
-            <Icon name="copy" size={18} />Copy link
-          </button>
-        </div>
-        <div className="btn-row">
-          <Link className="btn btn--secondary" to={`/pay/${result.hash}`}>Open the payment page</Link>
-          <button type="button" className="btn btn--secondary" onClick={() => { setResult(undefined); setTouched(false); setClient(''); setLines([{ description: '', quantity: '1', price: '' }]); }}>Create another invoice</button>
-        </div>
+        <span className="badge badge--ok" style={{ alignSelf: 'flex-start' }}><Icon name="check" />{many ? `${created.length} of ${of} invoices created` : 'Invoice created'}</span>
+        <h2>{many ? 'Send these payment links' : 'Send this payment link'}</h2>
+        {many && <p className="small muted">Separate invoices, one per month. Each is paid or scheduled on its own; nothing recurs by itself.</p>}
+        {created.map(({ res, due, index }) => (
+          <div key={res.hash} className="stack stack--sm">
+            {many && <span className="label">Invoice {index + 1} of {of} · due {formatDue(due)}</span>}
+            <div className="row" style={{ flexWrap: 'nowrap' }}>
+              <input className="input input--mono grow" readOnly value={res.link} aria-label={many ? `Payment link, invoice ${index + 1}` : 'Payment link'} onFocus={(e) => e.target.select()} />
+              <button type="button" className="btn btn--primary" style={{ height: 48 }} onClick={() => void navigator.clipboard?.writeText(res.link).then(() => app.toast('Link copied'))}>
+                <Icon name="copy" size={18} />Copy link
+              </button>
+            </div>
+            <div className="btn-row">
+              <Link className="btn btn--secondary" to={`/pay/${res.hash}`}>Open the payment page</Link>
+            </div>
+          </div>
+        ))}
+        {busy && <output className="small" style={{ display: 'block' }}>Follow your wallet: invoice {created.length + 1} of {of}…</output>}
+        {error && <div className="notice notice--bad" role="alert"><Icon name="alert" /><p>{error}</p></div>}
+        {!busy && <div className="btn-row"><button type="button" className="btn btn--secondary" onClick={reset}>Create another invoice</button></div>}
       </section>
     );
   }
@@ -172,6 +199,13 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
           <label htmlFor="ci-grace">Payable for (days after due)</label>
           <input id="ci-grace" className="input" inputMode="numeric" value={grace} onChange={(e) => setGrace(e.target.value)} aria-invalid={!!err('grace')} aria-describedby="ci-grace-h" />
           {err('grace') ? <span className="field-error">{err('grace')}</span> : <span id="ci-grace-h" className="hint">After this the invoice expires and cannot be paid.</span>}
+        </div>
+        <div className="field">
+          <label htmlFor="ci-series">Number of invoices (optional)</label>
+          <input id="ci-series" className="input" inputMode="numeric" value={seriesCount} onChange={(e) => setSeriesCount(e.target.value)} disabled={demoOn} aria-invalid={!!err('series')} aria-describedby="ci-series-h" />
+          {err('series')
+            ? <span className="field-error">{err('series')}</span>
+            : <span id="ci-series-h" className="hint">{seriesN && seriesN > 1 ? `Creates ${seriesN} separate invoices, one month apart, from the due date above. You sign each one; each is paid on its own. Nothing recurs by itself.` : 'Leave at 1 for a single invoice. A higher number creates separate monthly invoices; it is not a subscription.'}</span>}
         </div>
         <div className="field span-2">
           <label htmlFor="ci-payer">Only this wallet may pay (optional)</label>
