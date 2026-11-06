@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { InvoiceDocWire } from "@truce/invoice-lib";
 import { api, ApiFailure, type Config, type VerifyView } from "../api";
-import { Checklist, ErrorNote, InvoiceCard, Link } from "../components";
+import { Checklist, ErrorNote, InvoiceCard, Link, PinWarning } from "../components";
+import { checkPin, loadPins } from "../pinning";
 import { extractHash, shortAddress } from "../format";
 
 /** Used only by the demo button, to show what a swapped payout wallet looks like to the buyer. */
@@ -92,6 +93,7 @@ export default function Verify({ config }: { config?: Config }) {
       {verdict && (
         <>
           <Checklist verdict={verdict} domain={doc?.domain} />
+          {doc && <PinWarning pin={checkPin(loadPins(typeof localStorage === "undefined" ? undefined : localStorage), doc.domain, doc.invoice)} domain={doc.domain} invoice={doc.invoice} />}
           {doc && <InvoiceCard doc={doc} />}
           <section className="card">
             <h2>On chain</h2>

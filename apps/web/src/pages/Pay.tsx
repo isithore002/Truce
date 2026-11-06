@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Address, Hex } from "viem";
 import { invoiceHash, parseInvoiceDoc, signReceiveAuthorization } from "@truce/invoice-lib";
 import { api, ApiFailure, type Config, type InvoiceView, type VerifyView } from "../api";
-import { Checklist, ErrorNote, ExampleTag, InvoiceCard, Link } from "../components";
+import { Checklist, ErrorNote, ExampleTag, InvoiceCard, Link, PinWarning } from "../components";
+import { checkPin, loadPins, recordPin, type PinMap } from "../pinning";
 import { formatDateTime, formatUsdt, shortAddress } from "../format";
 import { connect, currentAccount, ensureChain, tokenBalance, walletMessage, walletSigner } from "../wallet";
 
@@ -16,6 +17,8 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
   const [balance, setBalance] = useState<bigint | undefined>();
   const [step, setStep] = useState<Step>("idle");
   const [payError, setPayError] = useState<string | undefined>();
+  const [ack, setAck] = useState(false);
+  const [pins, setPins] = useState<PinMap>(() => loadPins(typeof localStorage === "undefined" ? undefined : localStorage));
 
   const parsed = useMemo(() => (view ? parseInvoiceDoc(view.doc) : undefined), [view]);
   // The buyer's own browser recomputes the hash, so a server cannot hand over an invoice that does not match the link.
@@ -60,13 +63,17 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
     }
   }
 
-  async function waitForPaid() {
+  async function waitForPaid(): Promise<boolean> {
     for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 2000));
       const v = await api.invoice(hash).catch(() => undefined);
-      if (v?.status === "PAID") return void (await load(account));
+      if (v?.status === "PAID") {
+        await load(account);
+        return true;
+      }
     }
     setPayError("The payment was sent but is not confirmed yet. Refresh this page in a moment to see it.");
+    return false;
   }
 
   async function onPay() {
@@ -90,10 +97,16 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
         r: auth.r,
         s: auth.s,
       });
+      let paidNow = res.status === "PAID";
       if (res.status === "PENDING") {
         setStep("waiting");
-        await waitForPaid();
+        paidNow = await waitForPaid();
       } else await load(account);
+      if (paidNow) {
+        // Remember this merchant's wallets so a later change is flagged.
+        recordPin(localStorage, view!.doc.domain, parsed.value.invoice, Math.floor(Date.now() / 1000));
+        setPins(loadPins(localStorage));
+      }
     } catch (e) {
       setPayError(e instanceof ApiFailure ? e.message : walletMessage(e));
     } finally {
@@ -109,7 +122,9 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
   const paid = view.status === "PAID";
   const expired = view.status === "EXPIRED";
   const lowBalance = balance !== undefined && balance < inv.amount;
-  const canPay = verdict.result === "PASS" && !hashMismatch && !paid && !expired && !!account && !lowBalance && step === "idle";
+  const pin = checkPin(pins, view.doc.domain, inv);
+  const needsAck = pin.status === "changed" && !ack;
+  const canPay = verdict.result === "PASS" && !needsAck && !hashMismatch && !paid && !expired && !!account && !lowBalance && step === "idle";
   const busyLabel = step === "signing" ? "Confirm in your wallet…" : step === "sending" ? "Sending the payment…" : step === "waiting" ? "Waiting for confirmation…" : undefined;
 
   return (
@@ -119,6 +134,7 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
       </h1>
       <Checklist verdict={verdict} domain={view.doc.domain} />
       {hashMismatch && <ErrorNote>This invoice does not match its link. Do not pay it.</ErrorNote>}
+      {!paid && <PinWarning pin={pin} domain={view.doc.domain} invoice={inv} ack={ack} onAck={setAck} />}
       <InvoiceCard doc={view.doc} />
 
       {paid ? (
@@ -163,7 +179,7 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
               </p>
               {lowBalance && <ErrorNote>Your wallet holds {formatUsdt(balance!)}, but this invoice needs {formatUsdt(inv.amount)}.</ErrorNote>}
               <button className="button big" onClick={() => void onPay()} disabled={!canPay}>
-                {busyLabel ?? (verdict.result === "FAIL" ? "Cannot pay: checks failed" : `Pay ${formatUsdt(inv.amount)}`)}
+                {busyLabel ?? (verdict.result === "FAIL" ? "Cannot pay: checks failed" : needsAck ? "Confirm the new wallets first" : `Pay ${formatUsdt(inv.amount)}`)}
               </button>
             </>
           )}

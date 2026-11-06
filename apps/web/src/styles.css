@@ -102,3 +102,8 @@ input[type="text"], input[type="date"], input[type="number"] { width: 100%; font
 .total { font-size: 1.3rem; font-weight: 800; margin: 0.6rem 0; }
 pre.file { background: #0f1420; color: #e6edf7; border-radius: 8px; padding: 0.8rem; overflow-x: auto; font-size: 0.85rem; }
 .hint { font-size: 0.9rem; color: var(--muted); }
+
+.pin-warning { border: 2px solid #e0b800; background: var(--warn-bg); color: #4a3b00; border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1rem 0; }
+.pin-compare { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.pin-compare .wallet { margin: 0.2rem 0; font-weight: 500; font-size: 0.85rem; }
+.ack { display: block; margin-top: 0.8rem; font-weight: 650; }

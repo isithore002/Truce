@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { CheckId, InvoiceDocWire } from "@truce/invoice-lib";
 import type { InvoiceSummary, VerifyView } from "./api";
+import type { PinStatus } from "./pinning";
 import { formatDate, formatUsdt } from "./format";
 import { navigate } from "./router";
 
@@ -184,5 +185,52 @@ export function InvoiceTable({ items, explorerBase }: { items: InvoiceSummary[];
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Shown when a merchant's wallets differ from the ones this browser remembers from a previous payment. */
+export function PinWarning({
+  pin,
+  domain,
+  invoice,
+  ack,
+  onAck,
+}: {
+  pin: PinStatus;
+  domain: string;
+  invoice: { merchant: string; payout: string };
+  ack?: boolean;
+  onAck?: (v: boolean) => void;
+}) {
+  if (pin.status !== "changed") return null;
+  return (
+    <section className="pin-warning" role="alert" data-pin="changed">
+      <h2>Payee changed since your last payment to {domain}</h2>
+      <p>
+        {pin.signerChanged && pin.payoutChanged
+          ? "Both the signing wallet and the payout wallet differ from the ones you paid before."
+          : pin.signerChanged
+            ? "The signing wallet differs from the one you paid before."
+            : "The payout wallet differs from the one you paid before."}{" "}
+        This can be legitimate, such as a new bank account, but it is also what a fraudulent invoice looks like. Confirm with {domain} by another channel.
+      </p>
+      <div className="pin-compare">
+        <div>
+          <strong>You paid before</strong>
+          <p className="mono wallet">Signer {pin.pin.signingAddress}</p>
+          <p className="mono wallet">Payout {pin.pin.payoutAddresses.join(", ")}</p>
+        </div>
+        <div>
+          <strong>This invoice</strong>
+          <p className="mono wallet">Signer {invoice.merchant}</p>
+          <p className="mono wallet">Payout {invoice.payout}</p>
+        </div>
+      </div>
+      {onAck && (
+        <label className="ack">
+          <input type="checkbox" checked={!!ack} onChange={(e) => onAck(e.target.checked)} /> I have confirmed these new wallets with the merchant.
+        </label>
+      )}
+    </section>
   );
 }

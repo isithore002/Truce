@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { InvoiceDocWire } from "@truce/invoice-lib";
 import type { InvoiceSummary, VerifyView } from "../src/api";
-import { Checklist, ExampleTag, InvoiceCard, InvoiceTable } from "../src/components";
+import { Checklist, ExampleTag, InvoiceCard, InvoiceTable, PinWarning } from "../src/components";
 import Merchant from "../src/pages/Merchant";
 
 const ids = [
@@ -146,5 +146,30 @@ describe("Merchant page", () => {
     const html = renderToStaticMarkup(<Merchant config={cfg} />);
     expect(html).toContain("Connect your signing wallet");
     expect(html).toContain("EXAMPLE DATA");
+  });
+});
+
+describe("PinWarning", () => {
+  const inv = { merchant: "0x19d47570BA52E058bD6432009b2705F799b851Dc", payout: "0x9fc3a0b7d1e5c4e2a8b6f0d3c7e1b5a9d2f4e6c8" };
+  const pin = { signingAddress: inv.merchant, payoutAddresses: ["0x19d47570BA52E058bD6432009b2705F799b851Dc"], pinnedAt: 1 };
+
+  it("renders nothing when the wallets are new or unchanged", () => {
+    expect(renderToStaticMarkup(<PinWarning pin={{ status: "new" }} domain="a.example" invoice={inv} />)).toBe("");
+    expect(renderToStaticMarkup(<PinWarning pin={{ status: "same", pin }} domain="a.example" invoice={inv} />)).toBe("");
+  });
+  it("shows old and new wallets side by side and asks for confirmation", () => {
+    const html = renderToStaticMarkup(
+      <PinWarning pin={{ status: "changed", pin, signerChanged: false, payoutChanged: true }} domain="a.example" invoice={inv} ack={false} onAck={() => undefined} />,
+    );
+    expect(html).toContain("Payee changed since your last payment to a.example");
+    expect(html).toContain("The payout wallet differs");
+    expect(html).toContain(pin.payoutAddresses[0]);
+    expect(html).toContain(inv.payout);
+    expect(html).toContain("I have confirmed these new wallets");
+  });
+  it("names both wallets when both changed, and has no checkbox on the read-only verify page", () => {
+    const html = renderToStaticMarkup(<PinWarning pin={{ status: "changed", pin, signerChanged: true, payoutChanged: true }} domain="a.example" invoice={inv} />);
+    expect(html).toContain("Both the signing wallet and the payout wallet");
+    expect(html).not.toContain("checkbox");
   });
 });
