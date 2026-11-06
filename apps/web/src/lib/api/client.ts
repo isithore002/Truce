@@ -26,6 +26,8 @@ export interface TruceApi {
   healthz(): Promise<Healthz>;
   /** Setup page: reads the domain's published wallet list fresh and compares it with the merchant's wallets. */
   checkDomain(domain: string, signer: Address, payout: Address): Promise<DomainCheck>;
+  /** Demo servers only: publishes a fictional *.example merchant's file for these wallets (a real domain publishes its own file). */
+  registerDemoDomain(domain: string, name: string, signer: Address, payout: Address): Promise<{ domain: string; created: boolean }>;
 }
 
 export class ApiError extends Error {
@@ -100,4 +102,5 @@ export const httpApi: TruceApi = {
   healthz: async () => fromServer.healthz(await request<ServerHealthz>('/healthz')),
   checkDomain: (domain, signer, payout) =>
     request<DomainCheck>(`/api/domain-check?${new URLSearchParams({ domain, signer, payout }).toString()}`),
+  registerDemoDomain: (domain, name, signer, payout) => request<{ domain: string; created: boolean }>('/api/demo-domains', post({ domain, name, signer, payout })),
 };

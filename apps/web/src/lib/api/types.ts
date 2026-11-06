@@ -84,6 +84,10 @@ export interface DomainCheck {
   /** True when the answer came from the server's fictional example list rather than from the internet. */
   demo: boolean;
   listed?: { signingAddress: Address; payoutAddresses: Address[] };
+  /** Demo domains only: the server can publish this fictional name for the connected wallet. */
+  canRegister?: boolean;
+  /** Demo domains only: why it cannot (a built-in example, or a name another wallet registered). */
+  registerBlocked?: string;
 }
 
 export const STATUSES =['ISSUED', 'SCHEDULED_OK', 'AT_RISK', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED'] as const;

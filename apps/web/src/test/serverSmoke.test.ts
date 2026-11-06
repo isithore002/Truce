@@ -173,6 +173,21 @@ describe.skipIf(!run)('web client against apps/server', () => {
     await expect(httpApi.checkDomain('localhost', merchant.address, payout)).rejects.toBeInstanceOf(ApiError);
   });
 
+  it('setup registers a fictional demo domain for any wallet, and the check then passes; another wallet cannot take it', async () => {
+    const name = `smoke-${Date.now()}.example`;
+    const mine = buyer.address; // any wallet at all: nothing here comes from the example merchant
+    const before = await httpApi.checkDomain(name, mine, mine);
+    expect(before).toMatchObject({ status: 'UNREACHABLE', demo: true, canRegister: true });
+
+    expect(await httpApi.registerDemoDomain(name, 'Smoke Studio', mine, mine)).toEqual({ domain: name, created: true });
+    expect((await httpApi.checkDomain(name, mine, mine)).status).toBe('OK');
+
+    const taken = await httpApi.checkDomain(name, merchant.address, merchant.address);
+    expect(taken).toMatchObject({ status: 'SIGNER_MISMATCH', canRegister: false });
+    await expect(httpApi.registerDemoDomain(name, 'Other', merchant.address, merchant.address)).rejects.toBeInstanceOf(ApiError);
+    await expect(httpApi.registerDemoDomain(DOMAIN, 'Built in', buyer.address, buyer.address)).rejects.toBeInstanceOf(ApiError);
+  });
+
   it('a due time seconds away (the demo "due in N minutes") is collected by the scheduler', async () => {
     const { cfg, doc, hash } = await makeDoc(6, 'Smoke due in seconds');
     await httpApi.createInvoice(doc);

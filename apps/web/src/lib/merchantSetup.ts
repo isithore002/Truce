@@ -40,6 +40,12 @@ export function validateDomain(d: string): string | undefined {
   return undefined;
 }
 
+/** A fictional demo name from the business name, for example "My Studio!" gives "my-studio.example". */
+export function suggestDemoDomain(businessName: string): string {
+  const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '');
+  return `${slug || 'my-studio'}.example`;
+}
+
 export function buildDomainFile(s: MerchantSetup, signingAddress: Address): DomainFile | undefined {
   if (!isAddress(s.payout)) return undefined;
   return { version: 1, name: s.name.trim(), signingAddress, payoutAddresses: [s.payout], chainIds: [1874] };

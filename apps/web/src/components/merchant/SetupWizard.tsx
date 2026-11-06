@@ -4,7 +4,7 @@ import { useApp } from '../../app/AppContext';
 import { api } from '../../lib/api';
 import type { DomainCheck } from '../../lib/api/types';
 import { isAddress } from '../../lib/format';
-import { buildDomainFile, downloadBlob, loadSetup, saveSetup, validateDomain, type MerchantSetup } from '../../lib/merchantSetup';
+import { buildDomainFile, downloadBlob, loadSetup, saveSetup, suggestDemoDomain, validateDomain, type MerchantSetup } from '../../lib/merchantSetup';
 import { normaliseDomain } from '../../lib/pins';
 import { Icon } from '../Icon';
 import { AddressChip } from '../invoice/AddressChip';
@@ -15,6 +15,7 @@ export function SetupWizard() {
   const [touched, setTouched] = useState(false);
   const [check, setCheck] = useState<{ key: string; result?: DomainCheck; error?: string }>();
   const [checking, setChecking] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const domain = normaliseDomain(s.domain);
   const domainErr = validateDomain(s.domain);
   const payoutErr = isAddress(s.payout) ? undefined : 'Enter a wallet address: 0x and 40 hex characters';
@@ -29,17 +30,41 @@ export function SetupWizard() {
   const verified = current?.result?.status === 'OK';
   const done = [!!wallet.address, fieldsDone, ready && verified, false];
 
-  async function runCheck() {
-    if (!ready || !wallet.address || !isAddress(s.payout)) return;
-    const key = checkKey;
+  const suggested = suggestDemoDomain(s.name);
+
+  async function runCheck(d = domain) {
+    if (!wallet.address || !isAddress(s.payout) || !d) return;
+    const key = `${d}|${wallet.address}|${s.payout}`;
     setChecking(true);
     try {
-      setCheck({ key, result: await api.checkDomain(domain, wallet.address, s.payout) });
+      setCheck({ key, result: await api.checkDomain(d, wallet.address, s.payout) });
     } catch (e) {
       setCheck({ key, error: e instanceof Error ? e.message : 'The check could not run.' });
     } finally {
       setChecking(false);
     }
+  }
+
+  /** Demo servers only: a fictional .example name has no website, so the server publishes its file; then the check runs again by itself. */
+  async function register() {
+    if (!wallet.address || !isAddress(s.payout)) return;
+    setRegistering(true);
+    try {
+      await api.registerDemoDomain(domain, s.name.trim(), wallet.address, s.payout);
+      toast('Demo domain registered');
+      await runCheck();
+    } catch (e) {
+      setCheck({ key: checkKey, error: e instanceof Error ? e.message : 'The demo domain could not be registered.' });
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  function useSuggested() {
+    const next = { ...s, domain: suggested };
+    setS(next);
+    saveSetup(next);
+    void runCheck(suggested);
   }
   const active = done.findIndex((d) => !d);
   const stepState = (i: number) => (done[i] ? 'done' : i === active ? 'active' : 'todo');
@@ -61,7 +86,7 @@ export function SetupWizard() {
       </li>
 
       <li data-done={done[1]} data-step={stepState(1)}>
-        <form className="card stack" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!domainErr && !payoutErr && !nameErr) { saveSetup({ ...s, domain }); toast('Setup saved in this browser'); } }} noValidate>
+        <form className="card stack" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!domainErr && !payoutErr && !nameErr) { saveSetup({ ...s, domain }); toast('Setup saved in this browser'); if (ready) void runCheck(); } }} noValidate>
           <h2>Name your domain and payout wallet</h2>
           <div className="form-grid">
             <div className="field">
@@ -129,6 +154,22 @@ export function SetupWizard() {
                   <Icon name={verified ? 'check' : 'alert'} />
                   <div className="stack stack--sm">
                     <p><strong>{verified ? 'Your domain is set up.' : 'Not set up yet.'}</strong> {current.result.message}</p>
+                    {current.result.demo && !verified && current.result.canRegister && (
+                      <div className="btn-row">
+                        <button type="button" className="btn btn--primary" onClick={() => void register()} disabled={registering} data-testid="register-demo-domain">
+                          {registering ? 'Registering…' : 'Register this demo domain'}
+                        </button>
+                        <span className="small">Publishes the file for your connected wallet on this demo server. A real domain publishes its own file.</span>
+                      </div>
+                    )}
+                    {current.result.demo && !verified && current.result.canRegister === false && (
+                      <div className="stack stack--sm">
+                        {current.result.registerBlocked && <p className="small">This demo name cannot be registered for your wallet: {current.result.registerBlocked}</p>}
+                        <div className="btn-row">
+                          <button type="button" className="btn btn--primary" onClick={useSuggested} disabled={checking}>Use {suggested} instead</button>
+                        </div>
+                      </div>
+                    )}
                     {current.result.listed && !verified && (
                       <div className="stack stack--sm">
                         <p className="small">The file currently lists:</p>

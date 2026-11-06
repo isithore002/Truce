@@ -2,7 +2,7 @@ import { ApiError, type TruceApi } from './client';
 import {
   buildFixtures, DOMAIN_FILES, KESTREL_PRIOR_PIN, MOCK_ACCOUNTS, MOCK_SETTLER, TRACK_USDT, type MockRecord,
 } from './fixtures';
-import type { Check, CheckId, Hex, InvoiceDoc, InvoiceRecord, InvoiceSummary, VerifyResponse } from './types';
+import type { Check, CheckId, DomainFile, Hex, InvoiceDoc, InvoiceRecord, InvoiceSummary, VerifyResponse } from './types';
 import { CHECK_IDS, ZERO_ADDRESS } from './types';
 import { remainingToRefund } from '../refund';
 import { EXPLORER, explorerTx } from '../config';
@@ -22,6 +22,7 @@ const now = () => Math.floor(Date.now() / 1000);
 const wait = (ms = 350) => new Promise((r) => setTimeout(r, ms + Math.random() * 250));
 
 let records = new Map<Hex, MockRecord>();
+const registeredDemo = new Map<string, DomainFile>();
 let block = 4_812_330;
 
 function load() {
@@ -257,15 +258,24 @@ export const mockApi: TruceApi = {
     return { ok: true, chainMode: 'mock', block: String(block), relayerBalanceWei: '1840000000000000000', lastEvents };
   },
 
+  async registerDemoDomain(domain, name, signer, payout) {
+    await wait(300);
+    const d = domain.trim().toLowerCase();
+    if (!d.endsWith('.example') || DOMAIN_FILES[d]) throw new ApiError('INVALID_DOCUMENT', `Cannot register ${d}.`, 400);
+    registeredDemo.set(d, { version: 1, name, signingAddress: signer, payoutAddresses: [payout], chainIds: [1874] });
+    return { domain: d, created: true };
+  },
+
   /** Scripted: only the example merchant's file exists in mock mode. The real wording comes from the server in server mode. */
   async checkDomain(domain, signer, payout) {
     await wait(400);
     const name = domain.trim().toLowerCase();
-    const file = DOMAIN_FILES[name];
+    const file = DOMAIN_FILES[name] ?? registeredDemo.get(name);
     const where = `https://${name}/.well-known/truce.json`;
-    if (!file) return { status: 'UNREACHABLE', domain: name, demo: name.endsWith('.example'), message: `Could not read ${where}: the server answered HTTP 404. Buyers would see FAIL. (Mock mode: only the example merchant has a file.)` };
+    if (!file && name.endsWith('.example')) return { status: 'UNREACHABLE', domain: name, demo: true, canRegister: true, message: `No example file is registered for ${name} on this server. Buyers would see FAIL. (Mock mode)` };
+    if (!file) return { status: 'UNREACHABLE', domain: name, demo: false, message: `Could not read ${where}: the server answered HTTP 404. Buyers would see FAIL. (Mock mode: only the example merchant has a file.)` };
     const listed = { signingAddress: file.signingAddress, payoutAddresses: file.payoutAddresses };
-    if (!sameAddress(file.signingAddress, signer)) return { status: 'SIGNER_MISMATCH', domain: name, demo: true, listed, message: `Found ${name}, but it lists a different signing wallet than the one you connected. (Mock mode)` };
+    if (!sameAddress(file.signingAddress, signer)) return { status: 'SIGNER_MISMATCH', domain: name, demo: true, listed, canRegister: false, registerBlocked: 'that name belongs to another wallet or is a built-in example', message: `Found ${name}, but it lists a different signing wallet than the one you connected. (Mock mode)` };
     if (!file.payoutAddresses.some((a) => sameAddress(a, payout))) return { status: 'PAYOUT_NOT_LISTED', domain: name, demo: true, listed, message: `Found ${name}, but your payout wallet is not in its list. (Mock mode)` };
     return { status: 'OK', domain: name, demo: true, listed, message: `Found the example list for ${name}. It lists your signing wallet and payout wallet. (Mock mode)` };
   },
