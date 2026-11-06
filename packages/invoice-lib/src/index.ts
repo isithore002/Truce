@@ -5,3 +5,4 @@ export * from "./sign.js";
 export * from "./authorization.js";
 export * from "./doc.js";
 export * from "./verify.js";
+export * from "./builder.js";
