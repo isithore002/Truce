@@ -40,8 +40,8 @@ PASS, ten checks, full payout wallet. Point at the blue "First payment to this d
 "Anyone can check this invoice without a wallet: it shows PASS and that it was paid on chain. The accountant gets a CSV with transaction links."
 
 **2:40 to 3:05. Refund** (dashboard: open the paid invoice, Refund panel, amount 0.005, sign)
-Show "Refunded so far" and "Left to refund" change and the explorer link. If you have time, try an amount above what is left and show the plain refusal.
-"The merchant can refund part of a payment. The payout wallet signs once. The money can only go back to the wallet that paid, and never more than was paid. The contract enforces both."
+Show "Refunded so far" and "Left to refund" change and the explorer link. If you have time, try an amount above what is left and show the plain refusal. Then press "Download ledger" and open it: issued, payment and refund rows, each payment and refund with an explorer link, and the CSV row now showing the refunded and net-received amounts.
+"The merchant can refund part of a payment, and the accountant's files follow. The payout wallet signs once. The money can only go back to the wallet that paid, and never more than was paid. The contract enforces both."
 
 **3:05 to 3:30. Pay on the due date** (new invoice, "Demo: due in N minutes" = 2; buyer chooses "On the due date")
 Show Scheduled; you may cut to the finished Paid row or the explorer once it lands.

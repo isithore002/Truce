@@ -47,7 +47,8 @@ flowchart TB
 | Collections | A scheduler collects on the due date with retries and backoff; a health check warns before the due date | `apps/server/src/scheduler.ts` |
 | Audit trail | The event history per invoice, with timestamps and transaction links | `InvoiceRecord.events` in the store |
 | Internal control | The merchant's signature acts as the approval; the contract enforces it at the moment money moves | `settle` in the contract |
-| Reporting | Dashboard totals, the accountant CSV, the public verify page | `apps/web`, `api/csv.ts` |
+| Reporting | Dashboard totals, the accountant CSV (with refunds), the public verify page | `apps/web`, `api/csv.ts` |
+| Journal | A ledger export with one row per money movement: invoice issued (debit receivable, credit revenue), payment (debit cash, credit receivable), refund (debit sales returns, credit cash), each payment and refund with its transaction | `apps/server/src/api/ledger.ts`, `GET /api/merchants/:address/ledger.csv` |
 
 ## Three-way match
 
@@ -61,7 +62,9 @@ The third record is public, so anyone can recompute the invoice hash and compare
 
 ## What this view does not claim
 
-- It is not an ERP, and there is no ERP integration. The export is a file for an accountant.
+- It is not an ERP, and there is no ERP integration. The exports are files for an accountant. The ledger uses four illustrative account names, not a chart of accounts for any country.
+- Only money movements are in the ledger. A cancelled authorization, a failed collection or an expiry moves no money and stays in the event history.
+- Refunds in the exports are the ones this server recorded; the chain is the source of truth.
 - There are no user accounts, roles, approvals or segregation of duties. One merchant wallet signs; there is no merchant login.
 - The event history is stored in a JSON file on our server. The on-chain record is the only part that does not depend on us.
 - Tax, accounts payable, inventory and period closing are not covered.

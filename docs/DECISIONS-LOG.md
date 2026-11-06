@@ -51,6 +51,7 @@ The developer asked for five additions to raise the demo's impact for the Whitec
 3. A visible storefront demo app (`examples/merchant-demo/shop.ts`) whose Truce integration is 9 lines.
 4. A refund panel in the invoice drawer, backed by `POST /api/invoices/:hash/refund` (the payout wallet signs, the relayer sends, the contract pays only the original payer, capped).
 5. An optional monthly series: N separate invoices, each signed and paid on its own. Worded as a series of invoices, not a subscription or a recurring charge.
+6. An ERP-style reading of the architecture (`docs/design/G-ERP-STYLE-VIEW.md`), a CSV that shows refunds (`refunded`, `net_received`), and a ledger export with one row per money movement. Worded as an export for an accountant, never as an ERP integration.
 This reverses the earlier decision to keep the refund UI out. **No existing feature was removed to pay for these** (the change rule normally requires that): this is a written exception made by the developer. If time runs short the cut order is the series, the storefront and the fee line first, then the Soul badge.
 
 ## Build choices

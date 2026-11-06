@@ -136,3 +136,13 @@ Authorised by the developer in a written exception (docs/DECISIONS-LOG.md, "Addi
 Counts after these changes: server 159, web 83 (plus 8 opt-in smoke tests, 8 of 8 passing on the mock chain), demo storefront 8, invoice-lib 74, SDK 4. Foundry 49 was not rerun (no contract change).
 
 Still the biggest risk: no wallet screen, old or new, has been clicked in a real browser. The public Whitechain RPC was also slow at times during this work (one health check took 9 seconds), which can stall a live demo.
+
+### 10b. ERP-style reading, CSV refund fix and ledger export
+
+| Addition | Evidence | Not verified |
+|---|---|---|
+| Accountant CSV now has `refunded` and `net_received` (it previously showed a refunded invoice as full income) | Server tests: blank before payment, `0` and full net after payment, partial and full refund | Refunds come from this server's recorded events, not read from the chain per row |
+| Ledger export: `GET /api/merchants/:address/ledger.csv` and a "Download ledger" button | 12 ledger tests (accounting identities: debits equal credits; receivable, cash and returns balances; ordering; formula-injection safe), route tests after a real pay and refund, a web-client smoke test. **Live:** `npm run e2e:api` now ends by checking the CSV (`refunded 0.002, net 0.008`) and a ledger of issued, payment, refund with the settlement and refund transaction links, both confirmed `ok` on Blockscout (settle 0xb6011c14...4c25, refund 0x2a617de9...decb) | The download buttons were never clicked in a browser |
+| ERP-style reading of the architecture | `docs/design/G-ERP-STYLE-VIEW.md`, with a list of what it does not claim | Documentation only |
+
+The ledger has only money entries, uses illustrative account names, and is not accounting software. Counts now: server 172, web 83 (+8 opt-in smoke tests, 8 of 8 passing), library 74, SDK 4, storefront 8, Foundry 49 (not rerun).
