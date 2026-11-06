@@ -171,3 +171,6 @@ a.card:hover { transform: translateY(-2px); border-color: var(--p-line-strong); 
 .mock-band strong { font-weight: 600; letter-spacing: 0.02em; }
 .toast { bottom: 44px; }
 @media (max-width: 639px) { .page:has(.example-band) { padding-bottom: 44px; } .example-band .wrap { justify-content: flex-start; } }
+/* landing page: the notice sits in the flow at the very end, not pinned over the page */
+.example-band.example-band--end { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.page:has(.example-band--end) { padding-bottom: 0; }
