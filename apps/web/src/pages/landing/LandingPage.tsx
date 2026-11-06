@@ -9,7 +9,7 @@ import { FAQ, Faq } from './Faq';
 import { LiveCheck, PaymentFlow } from './Animated';
 import { DashboardFrame, PhoneMock } from './Mockups';
 import { TamperLab } from './TamperLab';
-import { WhitechainMark } from './WhitechainMark';
+import { Mark3D, WhitechainMark } from './WhitechainMark';
 
 /*
   Layout follows the "teal treasury" reference template the user chose: hero, product UI in a device frame, stat row,
@@ -139,7 +139,8 @@ export function LandingPage() {
     <div className="landing" ref={rootRef}>
       <section className="l-hero">
         <div className="l-hero__glow" aria-hidden="true" />
-        <div className="wrap">
+        <div className="wrap l-hero__top">
+          <div className="l-hero__text">
           <span className="l-eyebrow" data-reveal><i aria-hidden="true" />Testnet · Whitechain Sepolia · USDT</span>
           <h1 className="l-words" aria-label="Invoices your buyer can check before they pay.">
             {'Invoices your buyer can check before they pay.'.split(' ').map((w, i) => (
@@ -154,6 +155,8 @@ export function LandingPage() {
             <Link className="btn btn--primary btn--lg" to="/setup">Create an invoice<Icon name="arrow" className="arrow" /></Link>
             <Link className="btn btn--secondary btn--lg" to="/verify">Check an invoice</Link>
           </div>
+          </div>
+          <div className="l-hero__mark" data-reveal data-reveal-delay="200"><Mark3D className="wc__stage--hero" /></div>
         </div>
         <div className="wrap l-hero__frame" ref={frameRef}>
           <div className="l-tilt" data-reveal data-reveal-delay="300">

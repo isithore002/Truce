@@ -191,3 +191,17 @@
 @keyframes wc-bob { 50% { transform: translateY(-10px); } }
 @keyframes wc-shadow { 0%, 50%, 100% { transform: scaleX(1); } 25%, 75% { transform: scaleX(.35); } }
 @media (max-width: 899px) { .wc { grid-template-columns: 1fr; } .wc__stage { height: 380px; } .wc__spin { width: 180px; height: 180px; } }
+
+/* hero: headline on the left, the turning Whitechain mark on the right */
+.l-hero > .wrap.l-hero__top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--s-6); align-items: center; }
+.l-hero__text { display: flex; flex-direction: column; gap: var(--s-5); align-items: flex-start; }
+.l-hero__mark { justify-self: center; width: 100%; }
+.wc__stage--hero { height: 420px; }
+.wc__stage--hero .wc__spin { width: 200px; height: 200px; }
+@media (max-width: 1023px) { .wc__stage--hero { height: 360px; } .wc__stage--hero .wc__spin { width: 170px; height: 170px; } }
+@media (max-width: 899px) {
+  .l-hero > .wrap.l-hero__top { grid-template-columns: 1fr; }
+  .wc__stage--hero { height: 300px; }
+  .wc__stage--hero .wc__orbit { width: 320px; height: 320px; }
+  .wc__stage--hero .wc__spin { width: 140px; height: 140px; }
+}
