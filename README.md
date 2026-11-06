@@ -94,7 +94,7 @@ Limits: this fits only parties who already hold stablecoins, we have no adoption
 ## Tests
 
 - Foundry (49): settle, swapped payout, tampered amount, wrong signer, expiry, double settle, payer lock, fee-on-transfer token, ERC-1271 merchant, pause, golden vectors shared with TypeScript, fuzz and invariants, capped refunds.
-- Library (74), server (197, including a fake-clock scheduler suite, SSRF tests, the refund route, the ledger, the RPC fallback and the domain check), web (93, plus 10 opt-in smoke tests that run the web client against a live server: `npm run smoke:web`), SDK (4), demo storefront (8).
+- Library (74), server (205, including a fake-clock scheduler suite, SSRF tests, the refund route, the ledger, the RPC fallback and the domain check and the demo-domain registry), web (97, plus 11 opt-in smoke tests that run the web client against a live server: `npm run smoke:web`), SDK (4), demo storefront (8).
 - Live scripts above, each recorded with explorer links.
 
 ## Overlap with other entries
