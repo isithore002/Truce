@@ -21,6 +21,8 @@ export function summarize(rec: InvoiceRecord, now: number) {
     dueDate: inv.dueDate,
     expiry: inv.expiry,
     status: effectiveStatus(rec, now),
+    healthReason: rec.health?.reason,
+    collectAt: rec.auth?.mode === "due" ? rec.auth.validAfter : undefined,
     txHash: rec.payment?.txHash,
     paidAt: rec.payment?.paidAt,
     createdAt: rec.createdAt,

@@ -1,13 +1,13 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
-import type { Address, Hex } from "viem";
-import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc, verifyReceiveAuthorization, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib";
+import { concat, recoverTypedDataAddress, toHex, type Address, type Hex } from "viem";
+import { cancelAuthorizationTypedData, invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc, verifyReceiveAuthorization, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib";
 import { RateLimiter } from "../chain/limits.js";
 import type { AppContext } from "./app.js";
 import { ApiError, type ApiErrorCode } from "./errors.js";
 import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
-import { AddressParam, AuthorizeBody, HashParam, VerifyQuery } from "./schemas.js";
+import { AddressParam, AuthorizeBody, CancelBody, HashParam, VerifyQuery } from "./schemas.js";
 import { effectiveStatus, summarize } from "./status.js";
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -189,6 +189,65 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
 
     if (waited === "timeout") return reply.status(202).send({ status: "PENDING" });
     return reply.status(waited.status === "PAID" ? 200 : 202).send(waited);
+  });
+
+  // Snapshot of whether a scheduled payment would work right now. Not a lock: the balance can change a second later.
+  app.get("/api/invoices/:hash/health", async (req) => {
+    const { hash } = HashParam.parse(req.params);
+    const rec = await store.get(hash);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    const status = effectiveStatus(rec, ctx.now());
+    if (!rec.auth || rec.auth.mode !== "due" || (rec.status !== "SCHEDULED_OK" && rec.status !== "AT_RISK")) return { status, scheduled: false };
+    const parsed = parseInvoiceDoc(rec.doc);
+    if (!parsed.ok) throw new ApiError("INTERNAL", "The stored invoice is damaged.");
+    const a = rec.auth;
+    let h;
+    try {
+      h = await chain.health(parsed.value, { mode: "due", from: a.from, validAfter: BigInt(a.validAfter), validBefore: BigInt(a.validBefore), v: a.v, r: a.r, s: a.s });
+    } catch (e) {
+      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
+    }
+    const now = ctx.now();
+    const next = h.ok || h.reason === "AUTH_EXPIRING" ? "SCHEDULED_OK" : "AT_RISK";
+    const updated = await store.update(hash, (x) => {
+      if (x.status !== next) x.events.push({ at: now, type: next === "AT_RISK" ? "at_risk" : "recovered", detail: h.reason });
+      x.status = next;
+      x.health = { reason: h.reason, checkedAt: now };
+    });
+    return { status: effectiveStatus(updated!, now), scheduled: true, collectAt: a.validAfter, health: { ok: h.ok, reason: h.reason, balance: h.balance.toString(), checkedAt: now, note: "A snapshot, not a lock." } };
+  });
+
+  // The buyer cancels a scheduled payment: they sign a CancelAuthorization, the relayer submits it and pays the gas.
+  app.post("/api/invoices/:hash/cancel", async (req, reply) => {
+    const { hash } = HashParam.parse(req.params);
+    const sig = CancelBody.parse(req.body);
+    const rec = await store.get(hash);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    if (!rec.auth || rec.auth.mode !== "due" || (rec.status !== "SCHEDULED_OK" && rec.status !== "AT_RISK")) {
+      throw new ApiError("INVALID_DOCUMENT", "This invoice has no scheduled payment to cancel.");
+    }
+    if (ctx.inFlight.has(hash)) throw new ApiError("DUPLICATE", "A payment for this invoice is being sent right now.");
+    const tokenCtx = { chainId: chain.config.chainId, token: rec.doc.invoice.token as Address };
+    let signer: Address | undefined;
+    try {
+      signer = await recoverTypedDataAddress({ ...cancelAuthorizationTypedData({ authorizer: rec.auth.from, nonce: hash }, tokenCtx), signature: concat([sig.r as Hex, sig.s as Hex, toHex(sig.v, { size: 1 })]) });
+    } catch {
+      signer = undefined;
+    }
+    if (!signer || signer.toLowerCase() !== rec.auth.from.toLowerCase()) {
+      throw new ApiError("AUTH_INVALID", "The cancellation must be signed by the wallet that authorized the payment.");
+    }
+    let txHash: Hex;
+    try {
+      ({ txHash } = await chain.cancelAuthorization(rec.auth.from, hash, { v: sig.v, r: sig.r as Hex, s: sig.s as Hex }));
+    } catch (e) {
+      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
+    }
+    await store.update(hash, (x) => {
+      x.status = "CANCELLED";
+      x.events.push({ at: ctx.now(), type: "cancelled", detail: "the buyer cancelled the authorization", txHash });
+    });
+    return reply.status(200).send({ status: "CANCELLED", txHash });
   });
 
   // Try a scheduled collection now (rate limited). It can only act on an authorization the buyer already signed.

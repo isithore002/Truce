@@ -287,3 +287,66 @@ describe("Scheduler: collecting on the due date", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("GET /api/invoices/:hash/health and POST /api/invoices/:hash/cancel", () => {
+  const health = (env: Env, hash: string) => env.app.inject({ method: "GET", url: `/api/invoices/${hash}/health` });
+  const cancel = async (env: Env, hash: string, signer = buyer) => {
+    const sig = await signCancelAuthorization(signer, hash as `0x${string}`, tokenCtx);
+    return env.app.inject({ method: "POST", url: `/api/invoices/${hash}/cancel`, payload: sig });
+  };
+
+  it("reports a live snapshot and says it is not a lock", async () => {
+    const env = setup();
+    const { hash } = await scheduled(env);
+    const ok = (await health(env, hash)).json();
+    expect(ok).toMatchObject({ status: "SCHEDULED_OK", scheduled: true, health: { ok: true, reason: "NONE", note: "A snapshot, not a lock." } });
+    env.chain.setBalance(buyer.address, 5n);
+    const bad = (await health(env, hash)).json();
+    expect(bad).toMatchObject({ status: "AT_RISK", health: { ok: false, reason: "LOW_BALANCE", balance: "5" } });
+    expect((await get(env.app, hash)).status).toBe("AT_RISK");
+  });
+
+  it("says an unscheduled invoice has no health to report", async () => {
+    const env = setup();
+    const hash = await create(env.app, await makeDoc());
+    expect((await health(env, hash)).json()).toEqual({ status: "ISSUED", scheduled: false });
+    expect((await health(env, `0x${"ab".repeat(32)}`)).statusCode).toBe(404);
+  });
+
+  it("cancels a scheduled payment: the authorization is dead on the token and the invoice reads CANCELLED", async () => {
+    const env = setup();
+    const { hash, doc, auth } = await scheduled(env);
+    const res = await cancel(env, hash);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ status: "CANCELLED" });
+    expect(res.json().txHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect((await get(env.app, hash)).status).toBe("CANCELLED");
+    // The signed authorization can no longer be used by anyone, and the scheduler leaves it alone.
+    await expect(env.chain.settle({ ...doc }, auth)).rejects.toMatchObject({ code: "AUTH_INVALID" });
+    env.set(Number(doc.invoice.dueDate) + 1);
+    expect(await env.scheduler.tick()).toEqual({ paid: [], failed: [], retrying: [] });
+    expect((await get(env.app, hash)).status).toBe("CANCELLED");
+  });
+
+  it("refuses a cancellation signed by someone else, and a cancel for an unscheduled invoice", async () => {
+    const env = setup();
+    const { hash } = await scheduled(env);
+    const wrong = await cancel(env, hash, attacker);
+    expect(wrong.statusCode).toBe(422);
+    expect(wrong.json().error.code).toBe("AUTH_INVALID");
+    expect((await get(env.app, hash)).status).toBe("SCHEDULED_OK");
+
+    const plain = await create(env.app, await makeDoc());
+    expect((await cancel(env, plain)).statusCode).toBe(400);
+    expect((await cancel(env, `0x${"cd".repeat(32)}`)).statusCode).toBe(404);
+  });
+
+  it("cannot be re-scheduled with the same (now cancelled) authorization", async () => {
+    const env = setup();
+    const { hash, doc } = await scheduled(env);
+    await cancel(env, hash);
+    // The nonce is spent on the token, so the same invoice cannot be scheduled again; the merchant issues a new invoice.
+    const again = await schedule(env.app, hash, wire(await makeAuth(doc, "due")));
+    expect(again.statusCode).toBe(422);
+  });
+});

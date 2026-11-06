@@ -44,3 +44,10 @@ export const VerifyQuery = z.object({
   hash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "hash must be 32 bytes of hex").optional(),
   buyer: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "buyer must be an address").optional(),
 });
+
+/** Buyer-signed CancelAuthorization (v, r, s). */
+export const CancelBody = z.object({
+  v: z.number().int().refine((v) => v === 27 || v === 28, "v must be 27 or 28"),
+  r: bytes32,
+  s: bytes32,
+});
