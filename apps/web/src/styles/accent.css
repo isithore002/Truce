@@ -1,0 +1,77 @@
+/*
+  Second accent: Whitechain blue beside the deep teal. Teal stays the main colour (primary actions, dark bands);
+  blue marks what is interactive or highlighted. Loaded last so it can be tuned or removed in one place.
+  Contrast: --p-blue-ink on paper is about 5.8:1, white on --p-blue is about 4.6:1.
+*/
+:root {
+  --p-blue: #0066ff;
+  --p-blue-ink: #0b4fd6;
+  --p-blue-deep: #123f8c;
+  --p-blue-bg: #e7efff;
+  --info: #0b4fd6;
+  --info-bg: #e7efff;
+}
+
+/* focus, links, selection */
+:focus-visible { outline-color: var(--p-blue); }
+::selection { background: var(--p-blue); color: #fff; }
+.link { text-decoration-color: rgba(11, 79, 214, .35); }
+.link:hover { color: var(--p-blue-ink); text-decoration-color: currentColor; }
+.notice--info { border-color: rgba(11, 79, 214, .25); }
+
+/* nav: active pill and the scroll progress line */
+.nav__links a[aria-current="page"] { color: var(--p-blue-ink); background: var(--p-blue-bg); }
+.nav__progress { background: linear-gradient(90deg, var(--p-gold), var(--p-blue)); }
+
+/* buttons: teal into deep blue; secondary buttons answer in blue */
+.btn--primary { background: linear-gradient(120deg, #154a52 0%, var(--p-accent) 45%, var(--p-blue-deep) 100%); }
+.btn--primary:hover:not(:disabled) { background: linear-gradient(120deg, #1b5862 0%, #12404a 45%, #1650b0 100%); }
+.btn--secondary:hover:not(:disabled) { border-color: var(--p-blue); color: var(--p-blue-ink); }
+
+/* headings: ink through teal into blue */
+.page-head h1, .l-sec-head h2, .l-cta h2, .l-stats__lead, .dash-gate h1 {
+  background: linear-gradient(100deg, var(--p-ink) 0%, var(--p-ink) 40%, #1f5f63 68%, var(--p-blue-ink) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.dash__total { background: linear-gradient(90deg, var(--p-ink), var(--p-blue-ink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* landing headline: the word "check" in blue */
+.l-words span:nth-child(5) { color: var(--p-blue-ink); }
+
+/* page wash gets a faint blue light */
+body {
+  background:
+    radial-gradient(45% 40% at 85% 8%, rgba(0, 102, 255, .10), transparent 60%),
+    radial-gradient(55% 45% at 0% 0%, rgba(205, 200, 246, .28), transparent 60%),
+    radial-gradient(45% 40% at 100% 0%, rgba(247, 220, 203, .30), transparent 60%),
+    radial-gradient(50% 40% at 50% 100%, rgba(168, 150, 63, .08), transparent 70%),
+    var(--p-bg);
+  background-attachment: fixed;
+}
+
+/* pay panel border turns through teal, blue, gold, lilac */
+.pay-panel.is-ready {
+  background: linear-gradient(var(--p-card), var(--p-card)) padding-box,
+    conic-gradient(from var(--ang), var(--p-accent), var(--p-blue), var(--p-gold), var(--chart-c), var(--p-accent)) border-box;
+}
+
+/* dashboard */
+.dash__tabs button[aria-pressed="true"] { color: var(--p-blue-ink); }
+.dash__tabs button[aria-pressed="true"] em { background: var(--p-blue-bg); color: var(--p-blue-ink); }
+button.dash__card.is-on { border-color: var(--p-blue); box-shadow: 0 0 0 1px var(--p-blue) inset, 0 12px 30px -18px rgba(0, 102, 255, .5); }
+.dash__search:focus-within { border-color: var(--p-blue); box-shadow: 0 0 0 3px rgba(0, 102, 255, .14); }
+.dash__nav a.is-on { color: var(--p-blue-ink); }
+.dash__nav a.is-on svg { color: var(--p-blue); }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--p-blue); box-shadow: 0 0 0 3px rgba(0, 102, 255, .14); }
+
+/* verify preview, setup stepper, pay mode, live check */
+.verify-preview__icon { background: linear-gradient(135deg, var(--p-accent), var(--p-blue-deep)); }
+.steps > li[data-step="active"]::before { background: linear-gradient(135deg, var(--p-accent), var(--p-blue)); }
+.pay-mode__opt:has(input:checked) { border-color: var(--p-blue); background: rgba(0, 102, 255, .04); box-shadow: 0 0 0 1px var(--p-blue) inset; }
+.pay-mode__opt:has(input:checked) .pay-mode__icon { background: var(--p-blue); }
+.live__spinner { border-top-color: var(--p-blue); }
+
+/* landing: blue in the stats rules, the flow packet ring and the lab's selected option */
+.l-stats__row > div::before { background: linear-gradient(90deg, var(--p-ink), var(--p-blue)); }
+.flow__nodes li[data-state="done"] .flow__icon { border-color: rgba(0, 102, 255, .55); color: #cfe0ff; }
+.lab__seg button[aria-checked="true"] { color: var(--p-blue-ink); }
+.l-eyebrow i { box-shadow: 0 0 0 4px rgba(168, 150, 63, .18), 0 0 14px rgba(0, 102, 255, .25); }
