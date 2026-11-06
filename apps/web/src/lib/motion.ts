@@ -114,3 +114,23 @@ export function useCountUp(to: number, ms = 1200) {
   }, [to, ms]);
   return { ref, n };
 }
+
+/** Eases a displayed number toward `target` whenever it changes (for totals). Returns the current value. */
+export function useAnimatedNumber(target: number, ms = 900) {
+  const [v, setV] = useState(() => (prefersReducedMotion() ? target : 0));
+  const from = useRef(0);
+  useEffect(() => {
+    if (prefersReducedMotion()) { setV(target); return; }
+    const start = performance.now();
+    const a = from.current;
+    let raf = requestAnimationFrame(function step(t) {
+      const k = Math.min(1, (t - start) / ms);
+      const next = a + (target - a) * (1 - Math.pow(1 - k, 3));
+      setV(next);
+      from.current = next;
+      if (k < 1) raf = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}

@@ -1,0 +1,90 @@
+/* App-wide motion layer. Everything here runs only when the user allows motion; otherwise the end state shows. */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* page entrance on every navigation (App.tsx keys .route-enter by path) */
+  .route-enter { animation: m-rise .55s var(--ease) both; }
+
+  /* primary buttons: a light sheen sweeps across on hover */
+  .btn--primary { position: relative; overflow: hidden; isolation: isolate; }
+  .btn--primary::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .22) 50%, transparent 70%); transform: translateX(-120%); }
+  .btn--primary:hover:not(:disabled)::after { animation: m-sheen .9s var(--ease); }
+
+  /* verdict: stamps in; PASS rings out, FAIL shakes once */
+  .verdict--pass, .verdict--fail { animation: m-stamp .5s var(--ease) both; }
+  .verdict--pass .verdict__icon, .verdict--fail .verdict__icon { animation: m-pop .5s .15s var(--ease) both; position: relative; }
+  .verdict--pass .verdict__icon::after { content: ""; position: absolute; inset: 0; border-radius: 99px; box-shadow: 0 0 0 0 rgba(47, 125, 87, .45); animation: m-ring 1.6s .4s ease-out 2; }
+  .verdict--fail { animation: m-stamp .5s var(--ease) both, m-shake .45s .5s; }
+  .verdict--fail .verdict__icon::after { content: ""; position: absolute; inset: 0; border-radius: 99px; box-shadow: 0 0 0 0 rgba(158, 42, 32, .45); animation: m-ring 1.6s .4s ease-out 2; }
+  .verdict--loading .verdict__icon { animation: m-breathe 1.4s ease-in-out infinite; }
+
+  /* checks tick in one after another; failing rows keep a slow red pulse on their edge */
+  .checklist li { animation: m-slide .45s calc(var(--i, 0) * 70ms + .2s) var(--ease) both; }
+  .checklist__icon { animation: m-pop .4s calc(var(--i, 0) * 70ms + .35s) var(--ease) both; }
+  .checklist li[data-ok="false"] { box-shadow: inset 3px 0 0 var(--bad); animation: m-slide .45s calc(var(--i, 0) * 70ms + .2s) var(--ease) both, m-edge 2.4s 1.4s ease-in-out infinite; }
+
+  /* receipt: circle and check draw, confetti dots burst once */
+  .receipt__burst circle { stroke-dasharray: 176; stroke-dashoffset: 176; animation: m-draw .7s .1s var(--ease) forwards; }
+  .receipt__burst path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: m-draw .45s .7s var(--ease) forwards; }
+  .receipt__burst i { animation: m-burst .9s .75s var(--ease) both; }
+
+  /* merchant dashboard */
+  .dash__card { animation: m-rise .6s var(--ease) both; }
+  .dash__card:nth-child(2) { animation-delay: .08s; }
+  .dash__card:nth-child(3) { animation-delay: .16s; }
+  .dash__card { transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .2s; }
+  .dash__card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); border-color: var(--p-line-strong); }
+  .dash__stack i { transform-origin: left; animation: m-grow 1s .3s var(--ease) both; }
+  .dash__spark > svg path:last-child { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: m-draw 1.8s .2s var(--ease) forwards; }
+  .dash__spark > svg path:first-child { animation: m-fade 1s .9s both; }
+  .table tbody tr { animation: m-slide .45s calc(var(--i, 0) * 50ms + .1s) var(--ease) both; }
+
+  /* other pages */
+  .demo-grid > li { animation: m-rise .55s var(--ease) both; }
+  .demo-grid > li:nth-child(2) { animation-delay: .07s; }
+  .demo-grid > li:nth-child(3) { animation-delay: .14s; }
+  .demo-grid > li:nth-child(4) { animation-delay: .21s; }
+  .demo-card__icon { animation: m-wobble 3s 1s ease-in-out infinite; }
+  .verify-preview__group li { animation: m-slide .4s var(--ease) both; }
+  .verify-preview__group li:nth-child(2) { animation-delay: .08s; }
+  .verify-preview__group li:nth-child(3) { animation-delay: .16s; }
+  .verify-preview__group li:nth-child(4) { animation-delay: .24s; }
+  .verify-preview__icon { animation: m-breathe 3s ease-in-out infinite; }
+  .steps > li[data-done="true"]::before { animation: m-pop .45s var(--ease); }
+  .steps > li[data-step="active"]::before { animation: m-ring-teal 2s ease-out infinite; }
+  .ops-tiles > div { animation: m-rise .5s var(--ease) both; }
+  .ops-tiles > div:nth-child(2) { animation-delay: .07s; }
+  .ops-tiles > div:nth-child(3) { animation-delay: .14s; }
+  .ops-tiles strong.is-ok svg { animation: m-pop .4s .3s var(--ease) both; }
+  .badge { animation: m-fade .4s both; }
+  .toast { animation: m-toast .35s var(--ease) both; }
+  .network > span:first-child { animation: m-blink 2.4s ease-in-out infinite; }
+}
+
+@keyframes m-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes m-slide { from { opacity: 0; transform: translateX(-10px); } }
+@keyframes m-fade { from { opacity: 0; } }
+@keyframes m-pop { from { transform: scale(.3); opacity: 0; } 70% { transform: scale(1.12); opacity: 1; } }
+@keyframes m-stamp { from { opacity: 0; transform: scale(1.03); } }
+@keyframes m-shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@keyframes m-ring { to { box-shadow: 0 0 0 16px rgba(0, 0, 0, 0); } }
+@keyframes m-ring-teal { 0% { box-shadow: 0 0 0 0 rgba(15, 50, 56, .35); } 100% { box-shadow: 0 0 0 12px rgba(15, 50, 56, 0); } }
+@keyframes m-breathe { 50% { transform: scale(1.06); } }
+@keyframes m-edge { 50% { box-shadow: inset 6px 0 0 var(--bad); } }
+@keyframes m-draw { to { stroke-dashoffset: 0; } }
+@keyframes m-grow { from { transform: scaleX(0); } }
+@keyframes m-sheen { to { transform: translateX(120%); } }
+@keyframes m-wobble { 0%, 90%, 100% { transform: none; } 93% { transform: rotate(-10deg); } 96% { transform: rotate(10deg); } }
+@keyframes m-blink { 50% { opacity: .35; } }
+@keyframes m-toast { from { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes m-burst {
+  from { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); }
+  to { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scale(.4); }
+}
+
+/* receipt burst (static parts; shown with or without motion) */
+.receipt__burst { position: relative; width: 64px; height: 64px; margin-bottom: var(--s-2); }
+.receipt__burst svg { width: 64px; height: 64px; fill: none; stroke: var(--ok); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.receipt__burst circle { fill: var(--ok-bg); }
+.receipt__burst i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; opacity: 0; background: var(--p-gold); }
+.receipt__burst i:nth-child(3n) { background: var(--ok); }
+.receipt__burst i:nth-child(3n + 1) { background: var(--chart-c); }

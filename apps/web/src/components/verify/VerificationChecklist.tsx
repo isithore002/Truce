@@ -27,10 +27,10 @@ export function VerificationChecklist({ checks, domain, loading }: { checks?: Ch
         <span className="small muted">{passed} of {checks.length} passed</span>
       </div>
       <ul className="checklist">
-        {sorted.map((c) => {
+        {sorted.map((c, i) => {
           const m = checkMessage(c.id, c.ok, { domain });
           return (
-            <li key={c.id} data-ok={c.ok} data-check={c.id}>
+            <li key={c.id} data-ok={c.ok} data-check={c.id} style={{ ['--i' as string]: i }}>
               <span className="checklist__icon"><Icon name={c.ok ? 'check' : 'x'} /></span>
               <div>
                 <strong>

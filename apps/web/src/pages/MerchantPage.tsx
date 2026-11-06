@@ -11,6 +11,7 @@ import { api } from '../lib/api';
 import type { Hex, InvoiceSummary, Status } from '../lib/api/types';
 import { formatUsdt } from '../lib/format';
 import { loadSetup } from '../lib/merchantSetup';
+import { useAnimatedNumber } from '../lib/motion';
 
 type Bucket = { key: string; label: string; note: string; color: string; match: (s: Status) => boolean };
 
@@ -55,6 +56,8 @@ export function MerchantPage() {
     return { all, buckets, paidCount: list.filter((r) => r.status === 'PAID').length, count: list.length, attention: list.filter((r) => r.status === 'AT_RISK' || r.status === 'FAILED').length, example: list.some((r) => r.example) };
   }, [rows]);
   const spark = useMemo(() => sparkPath(rows ?? []), [rows]);
+  // base units fit a JS number exactly up to 9e15 (9 billion USDT); the label always carries the exact bigint value
+  const shownTotal = useAnimatedNumber(Number(totals.all));
 
   if (!address) {
     return (
@@ -107,7 +110,7 @@ export function MerchantPage() {
                 </div>
                 <span className="dash__label">Total invoiced</span>
                 {rows ? (
-                  <div className="dash__total" aria-live="polite">{formatUsdt(totals.all)} <small>USDT</small></div>
+                  <div className="dash__total" aria-label={`${formatUsdt(totals.all)} USDT`}><span aria-hidden="true">{formatUsdt(BigInt(Math.round(shownTotal)))} <small>USDT</small></span></div>
                 ) : <span className="skeleton" style={{ height: 52, width: 260 }} />}
                 {rows && <span className="dash__delta">{totals.paidCount} of {totals.count} paid{totals.attention ? ` · ${totals.attention} need attention` : ''}</span>}
               </div>

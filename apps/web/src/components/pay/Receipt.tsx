@@ -12,6 +12,10 @@ export function Receipt({ record, explorerUrl }: { record: InvoiceRecord; explor
   const scheduled = !tx && record.status === 'SCHEDULED_OK';
   return (
     <section className="card receipt stack" aria-labelledby="receipt-title" aria-live="polite">
+      <div className="receipt__burst" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" /><path d="M20 33l8 8 16-17" /></svg>
+        {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ ['--a' as string]: `${i * 36}deg` }} />)}
+      </div>
       <div className="row" style={{ gap: 10 }}>
         <span className="badge badge--ok"><Icon name="check" />{scheduled ? 'Scheduled' : 'Paid'}</span>
         <h3 id="receipt-title">{scheduled ? 'Payment scheduled' : 'Payment receipt'}</h3>

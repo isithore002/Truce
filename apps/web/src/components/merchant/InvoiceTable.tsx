@@ -20,8 +20,8 @@ export function InvoiceTable({ rows, selected, onOpen }: { rows: InvoiceSummary[
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.hash} aria-selected={selected === r.hash} onClick={() => onOpen(r.hash)}>
+          {rows.map((r, i) => (
+            <tr key={r.hash} aria-selected={selected === r.hash} onClick={() => onOpen(r.hash)} style={{ ['--i' as string]: i }}>
               <td data-label="Client">
                 <button type="button" className="rowlink" onClick={(e) => { e.stopPropagation(); onOpen(r.hash); }}>{r.clientName}</button>
               </td>
