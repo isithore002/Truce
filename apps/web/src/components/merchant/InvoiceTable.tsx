@@ -5,7 +5,7 @@ import { AddressChip } from '../invoice/AddressChip';
 import { AmountUsdt } from '../invoice/AmountUsdt';
 import { StatusBadge } from '../invoice/StatusBadge';
 
-export function InvoiceTable({ rows, selected, onOpen }: { rows: InvoiceSummary[]; selected?: Hex; onOpen: (hash: Hex) => void }) {
+export function InvoiceTable({ rows, selected, onOpen, flash }: { rows: InvoiceSummary[]; selected?: Hex; onOpen: (hash: Hex) => void; flash?: ReadonlySet<Hex> }) {
   return (
     <div className="card card--flush">
       <table className="table">
@@ -21,7 +21,7 @@ export function InvoiceTable({ rows, selected, onOpen }: { rows: InvoiceSummary[
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={r.hash} aria-selected={selected === r.hash} onClick={() => onOpen(r.hash)} style={{ ['--i' as string]: i }}>
+            <tr key={r.hash} className={flash?.has(r.hash) ? 'row-flash' : undefined} aria-selected={selected === r.hash} onClick={() => onOpen(r.hash)} style={{ ['--i' as string]: i }}>
               <td data-label="Client">
                 <button type="button" className="rowlink" onClick={(e) => { e.stopPropagation(); onOpen(r.hash); }}>{r.clientName}</button>
               </td>

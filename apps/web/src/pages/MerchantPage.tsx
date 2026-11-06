@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../app/AppContext';
 import { Icon } from '../components/Icon';
@@ -11,6 +11,7 @@ import { InvoiceTable } from '../components/merchant/InvoiceTable';
 import { api } from '../lib/api';
 import type { Hex, InvoiceSummary, Status } from '../lib/api/types';
 import { formatUsdt, isAddress } from '../lib/format';
+import { changedRows, POLL_MS, sameRows } from '../lib/liveRows';
 import { loadSetup } from '../lib/merchantSetup';
 import { useAnimatedNumber } from '../lib/motion';
 
@@ -57,11 +58,37 @@ export function MerchantPage() {
   const closeCreate = useCallback(() => setCreating(false), []);
   const address = wallet.address;
 
+  // Rows that just changed flash for a moment, so a payment landing while you watch is easy to see.
+  const rowsRef = useRef<InvoiceSummary[] | undefined>(undefined);
+  const flashTimer = useRef<number | undefined>(undefined);
+  const [flash, setFlash] = useState<ReadonlySet<Hex>>(new Set());
+  const apply = useCallback((r: InvoiceSummary[]) => {
+    const changed = changedRows(rowsRef.current, r);
+    rowsRef.current = r;
+    setRows((prev) => (sameRows(prev, r) ? prev : r));
+    if (changed.length) {
+      setFlash(new Set(changed));
+      window.clearTimeout(flashTimer.current);
+      flashTimer.current = window.setTimeout(() => setFlash(new Set()), 2600);
+    }
+  }, []);
+
   const load = useCallback(() => {
     if (!address) return;
-    api.listMerchantInvoices(address).then((r) => { setRows(r); setError(undefined); }, (e: Error) => setError(e.message));
-  }, [address]);
+    api.listMerchantInvoices(address).then((r) => { apply(r); setError(undefined); }, (e: Error) => setError(e.message));
+  }, [address, apply]);
   useEffect(() => load(), [load]);
+
+  // Quiet refresh while the tab is visible. A failed poll keeps what is on screen; the Try again button handles real outages.
+  useEffect(() => {
+    if (!address) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      api.listMerchantInvoices(address).then(apply, () => undefined);
+    }, POLL_MS);
+    return () => window.clearInterval(id);
+  }, [address, apply]);
+  useEffect(() => () => window.clearTimeout(flashTimer.current), []);
 
   const totals = useMemo(() => {
     const list = rows ?? [];
@@ -253,7 +280,7 @@ export function MerchantPage() {
                 <button type="button" className="btn btn--secondary" onClick={() => { setFilter('all'); setQuery(''); }}>Show all invoices</button>
               </div>
             ) : (
-              <InvoiceTable rows={visible} selected={open} onOpen={setOpen} />
+              <InvoiceTable rows={visible} selected={open} onOpen={setOpen} flash={flash} />
             )}
           </section>
         </div>

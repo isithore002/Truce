@@ -78,3 +78,11 @@ button.dash__card:focus-visible { outline: 2px solid var(--p-accent); outline-of
   .drawer-back { animation: m-fade .25s both; }
 }
 @keyframes sheet-in { from { transform: translateX(40px); opacity: 0; } }
+
+/* ---------- a row whose status just changed (live refresh) ---------- */
+.row-flash td { animation: row-flash 2.4s ease-out; }
+@keyframes row-flash { from { background: var(--ok-bg); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  /* no fade for people who asked for less motion: the tint simply shows, then goes when the class is removed */
+  .row-flash td { animation: none; background: var(--ok-bg); }
+}
