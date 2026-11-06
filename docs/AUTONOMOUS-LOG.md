@@ -12,3 +12,7 @@ Started 2026-11-06. Plan: `docs/prompts/AUTONOMOUS-RUN.md`. One line per task: i
 - T20 merchant page (`/merchant`): setup + truce.json generator, invoice form, dashboard, CSV button, Home card. Web tests 31. Dev server serves /merchant (HTTP 200), `npm run e2e:api` 11/11 against mock.
 - NOT verified in a browser: wallet connect, add chain, EIP-712 signing prompt, clipboard, CSV download click. Tags `c2`, `c3` mean "built and tested", not "seen".
 - Suites: Foundry 35, lib 71, server 101, web 31, sdk 4.
+
+## Phase 2: key pinning (C4)
+- T23: `apps/web/src/pinning.ts` (browser localStorage, per docs/INTERFACES.md: pin recorded after a first successful payment; later change of signer or payout shows `PinWarning` with old and new wallets side by side; Pay needs an acknowledgement checkbox). Verify page shows the same warning read-only. Web tests 40 (pinning 6, render +3).
+- Limit: pins live in one browser, so a new browser or cleared storage starts with no pin (stated in README later). Not seen in a browser.
