@@ -94,7 +94,7 @@ export default function Verify({ config }: { config?: Config }) {
         <>
           <Checklist verdict={verdict} domain={doc?.domain} />
           {doc && <PinWarning pin={checkPin(loadPins(typeof localStorage === "undefined" ? undefined : localStorage), doc.domain, doc.invoice)} domain={doc.domain} invoice={doc.invoice} />}
-          {doc && <InvoiceCard doc={doc} />}
+          {doc && <InvoiceCard doc={doc} exampleMode={!!config?.exampleMode} />}
           <section className="card">
             <h2>On chain</h2>
             {verdict.onchain.unavailable ? (

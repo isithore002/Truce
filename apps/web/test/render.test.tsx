@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { InvoiceDocWire } from "@truce/invoice-lib";
 import type { InvoiceSummary, VerifyView } from "../src/api";
-import { Checklist, ExampleTag, InvoiceCard, InvoiceTable, PinWarning, ScheduleStatus } from "../src/components";
+import { Checklist, ExampleTag, InvoiceCard, InvoiceTable, PinWarning, ScheduleStatus, SoulBadge } from "../src/components";
 import Merchant from "../src/pages/Merchant";
 
 const ids = [
@@ -212,5 +212,23 @@ describe("InvoiceTable with scheduled invoices", () => {
     expect(early).not.toContain("Collect now");
     const late = renderToStaticMarkup(<InvoiceTable items={[base]} explorerBase="https://e" nowSec={1800000700} onCollect={() => undefined} />);
     expect(late).toContain("Collect now");
+  });
+});
+
+describe("SoulBadge (mocked)", () => {
+  const merchant = "0x19d47570BA52E058bD6432009b2705F799b851Dc";
+  it("uses exactly the agreed wording, and says nothing about a business", () => {
+    const html = renderToStaticMarkup(<SoulBadge address={merchant} exampleMode />);
+    expect(html).toContain("Individual KYC-verified on WhiteBIT (demo data, mocked)");
+    expect(html.toLowerCase()).not.toContain("verified business");
+    expect(html).toContain("says nothing about the business");
+  });
+  it("is absent outside example mode and for wallets the demo does not list", () => {
+    expect(renderToStaticMarkup(<SoulBadge address={merchant} exampleMode={false} />)).toBe("");
+    expect(renderToStaticMarkup(<SoulBadge address="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" exampleMode />)).toBe("");
+  });
+  it("appears on the invoice card for the example merchant only in example mode", () => {
+    expect(renderToStaticMarkup(<InvoiceCard doc={doc} exampleMode />)).toContain("soul-badge");
+    expect(renderToStaticMarkup(<InvoiceCard doc={doc} />)).not.toContain("soul-badge");
   });
 });

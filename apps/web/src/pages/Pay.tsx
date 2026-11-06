@@ -175,7 +175,7 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
       <Checklist verdict={verdict} domain={view.doc.domain} />
       {hashMismatch && <ErrorNote>This invoice does not match its link. Do not pay it.</ErrorNote>}
       {!paid && <PinWarning pin={pin} domain={view.doc.domain} invoice={inv} ack={ack} onAck={setAck} />}
-      <InvoiceCard doc={view.doc} />
+      <InvoiceCard doc={view.doc} exampleMode={!!config?.exampleMode} />
 
       {paid ? (
         <section className="card receipt">

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Address } from "viem";
 import { invoiceHash, signInvoice, toWire, type InvoiceDoc } from "@truce/invoice-lib";
 import { api, ApiFailure, type Config, type InvoiceSummary } from "../api";
-import { ErrorNote, ExampleTag, InvoiceTable, Link } from "../components";
+import { ErrorNote, ExampleTag, InvoiceTable, Link, SoulBadge } from "../components";
 import { formatUsdt } from "../format";
 import {
   EMPTY_FORM,
@@ -134,7 +134,7 @@ export default function Merchant({ config }: { config?: Config }) {
           <section className="card">
             <h2>1. Your business and the file you publish</h2>
             <p className="muted">
-              Signing wallet: <span className="mono">{account}</span>
+              Signing wallet: <span className="mono">{account}</span> <SoulBadge address={account} exampleMode={example} />
             </p>
             <div className="form-grid">
               <label>

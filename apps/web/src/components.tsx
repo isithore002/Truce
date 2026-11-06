@@ -4,6 +4,7 @@ import type { InvoiceSummary, VerifyView } from "./api";
 import type { PinStatus } from "./pinning";
 import { formatDate, formatDateTime, formatUsdt } from "./format";
 import { healthText, untilText } from "./schedule";
+import { SOUL_BADGE_TEXT, getSoulStatus } from "./soul";
 import { navigate } from "./router";
 
 /** An in-app link that does not reload the page. */
@@ -71,7 +72,7 @@ export function Checklist({ verdict, domain }: { verdict: VerifyView; domain?: s
 }
 
 /** The invoice as the merchant signed it. Shows the full payout wallet: that is the thing to look at. */
-export function InvoiceCard({ doc }: { doc: InvoiceDocWire }) {
+export function InvoiceCard({ doc, exampleMode = false }: { doc: InvoiceDocWire; exampleMode?: boolean }) {
   const inv = doc.invoice;
   return (
     <section className="card invoice">
@@ -82,6 +83,7 @@ export function InvoiceCard({ doc }: { doc: InvoiceDocWire }) {
           <div className="muted">
             {doc.domain} · billed to {doc.details.clientName}
           </div>
+          <SoulBadge address={inv.merchant} exampleMode={exampleMode} />
         </div>
         <div className="amount">{formatUsdt(inv.amount)}</div>
       </div>
@@ -312,4 +314,15 @@ export function ScheduleStatus({
     );
   }
   return null;
+}
+
+/** Mocked WB Soul badge. Shown only for demo data and always labelled as mocked. */
+export function SoulBadge({ address, exampleMode }: { address: string; exampleMode: boolean }) {
+  const soul = getSoulStatus(address, exampleMode);
+  if (!soul?.verified) return null;
+  return (
+    <span className="soul-badge" data-testid="soul-badge" title="Demo only. Soul data is mocked here. WB Soul's verified flag reflects one individual's personal KYC. It says nothing about the business behind the invoice.">
+      {SOUL_BADGE_TEXT}
+    </span>
+  );
 }
