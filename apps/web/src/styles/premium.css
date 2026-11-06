@@ -259,3 +259,13 @@ body {
   [data-reveal] { transition-duration: 1s, 1.1s; }
 }
 .l-stats__row > div { flex-direction: column; justify-content: flex-start; gap: 10px; } .l-stats__row dd { order: -1; }
+
+/* hero: quick demo path (two one-click scenarios in mock mode, the tamper lab otherwise) */
+.l-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 2px; }
+.l-quick__label { font-size: 13px; color: var(--p-muted); margin-right: 4px; }
+.l-quick__link { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13.5px; font-weight: 500; text-decoration: none; color: var(--p-ink); background: rgba(255, 255, 255, .7); border: 1px solid var(--p-line); transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
+.l-quick__link:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -10px rgba(16, 47, 53, .35); }
+.l-quick__link.is-ok svg { color: var(--ok); }
+.l-quick__link.is-bad svg { color: var(--bad-fill); }
+.l-quick__link.is-ok:hover { border-color: rgba(22, 134, 83, .5); }
+.l-quick__link.is-bad:hover { border-color: rgba(217, 76, 76, .5); }

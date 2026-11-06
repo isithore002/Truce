@@ -3,6 +3,7 @@ import '../../styles/landing-anim.css';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
+import { scenarioHash } from '../../lib/api/fixtures';
 import { config } from '../../lib/config';
 import { useCountUp, useReveal, useScrollProgress } from '../../lib/motion';
 import { FAQ, Faq } from './Faq';
@@ -155,6 +156,17 @@ export function LandingPage() {
           <div className="btn-row" data-reveal data-reveal-delay="640">
             <Link className="btn btn--primary btn--lg" to="/setup">Create an invoice<Icon name="arrow" className="arrow" /></Link>
             <Link className="btn btn--secondary btn--lg" to="/verify">Check an invoice</Link>
+          </div>
+          <div className="l-quick" data-reveal data-reveal-delay="760">
+            <span className="l-quick__label">See it in 30 seconds</span>
+            {config.apiMode === 'mock' ? (
+              <>
+                <Link className="l-quick__link is-ok" to={`/pay/${scenarioHash('pass')}`}><Icon name="check" size={14} />An honest invoice</Link>
+                <Link className="l-quick__link is-bad" to={`/pay/${scenarioHash('swappedPayout')}`}><Icon name="x" size={14} />The swapped-wallet attack</Link>
+              </>
+            ) : (
+              <a className="l-quick__link" href="#lab-h"><Icon name="shield" size={14} />Try to break an invoice</a>
+            )}
           </div>
           </div>
           <div className="l-hero__mark" data-reveal data-reveal-delay="200"><Mark3D className="wc__stage--hero" /></div>
