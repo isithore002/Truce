@@ -1,11 +1,11 @@
 import { useApp } from '../../app/AppContext';
-import { config, explorerAddress, explorerTx } from '../../lib/config';
+import { explorerAddress, explorerTx } from '../../lib/config';
 import { shortAddress } from '../../lib/format';
 import { Icon } from '../Icon';
 
 /** Shortened address or hash with copy and explorer buttons. The full value is in the title and the screen-reader label. */
 export function AddressChip({ value, kind = 'address', label, explorer = true }: { value: string; kind?: 'address' | 'tx' | 'hash'; label?: string; explorer?: boolean }) {
-  const { toast, publicConfig } = useApp();
+  const { toast, publicConfig, chainSimulated } = useApp();
   const base = publicConfig?.explorerUrl;
   const href = kind === 'address' ? explorerAddress(value, base) : kind === 'tx' ? explorerTx(value, base) : undefined;
   const what = kind === 'address' ? 'address' : kind === 'tx' ? 'transaction' : 'hash';
@@ -26,7 +26,7 @@ export function AddressChip({ value, kind = 'address', label, explorer = true }:
       >
         <Icon name="copy" />
       </button>
-      {explorer && href && !(kind === 'tx' && config.apiMode === 'mock') && ( // mock transaction hashes are made up: no link to a page that cannot find them
+      {explorer && href && !(kind === 'tx' && chainSimulated) && ( // mock transaction hashes are made up: no link to a page that cannot find them
         <a className="icon-btn" href={href} target="_blank" rel="noreferrer" aria-label={`Open ${what} in the Whitechain explorer (new tab)`}>
           <Icon name="external" />
         </a>

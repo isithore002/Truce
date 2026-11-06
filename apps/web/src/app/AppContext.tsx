@@ -29,6 +29,8 @@ interface AppState {
   /** pages set this when the document on screen carries details.example = true */
   setPageExample: (v: boolean) => void;
   showExample: boolean;
+  /** true when no real chain is behind the app: demo mode, or a server running CHAIN_MODE=mock. Payments are simulated. */
+  chainSimulated: boolean;
   toast: (msg: string) => void;
 }
 
@@ -39,6 +41,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [configError, setConfigError] = useState<string>();
   const [wallet, setWallet] = useState<WalletState>({ connecting: false });
   const [pageExample, setPageExample] = useState(false);
+  const [serverChain, setServerChain] = useState<string>();
+  useEffect(() => {
+    if (config.apiMode !== 'server') return;
+    api.healthz().then((h) => setServerChain(h.chainMode), () => setServerChain(undefined));
+  }, []);
   const [toastMsg, setToastMsg] = useState<string>();
   const toastTimer = useRef<number>(undefined);
 
@@ -105,8 +112,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       disconnect: () => { setWallet({ connecting: false }); setWalletInfo(undefined); },
       onRightChain: wallet.chainId === chain.id,
       showExample: config.exampleMode || pageExample || !!publicConfig?.exampleMode,
+      chainSimulated: config.apiMode === 'mock' || serverChain === 'mock',
     }),
-    [publicConfig, configError, reloadConfig, wallet, connect, reconnect, walletInfo, switchChain, toast, pageExample],
+    [publicConfig, configError, reloadConfig, wallet, connect, reconnect, walletInfo, switchChain, toast, pageExample, serverChain],
   );
 
   return (

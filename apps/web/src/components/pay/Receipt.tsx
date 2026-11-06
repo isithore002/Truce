@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useApp } from '../../app/AppContext';
 import type { InvoiceRecord } from '../../lib/api/types';
 import { config, explorerTx } from '../../lib/config';
 import { formatDue, formatIso } from '../../lib/format';
@@ -10,7 +11,7 @@ import { NetworkFee } from './NetworkFee';
 
 export function Receipt({ record, explorerUrl }: { record: InvoiceRecord; explorerUrl?: string }) {
   const { doc, tx } = record;
-  const mock = config.apiMode === 'mock'; // mock payments carry made-up hashes, so they must not link to the explorer
+  const { chainSimulated: mock } = useApp(); // simulated payments carry made-up hashes, so they must not link to the explorer
   const scheduled = !tx && record.status === 'SCHEDULED_OK';
   return (
     <section className="card receipt stack" aria-labelledby="receipt-title" aria-live="polite">
@@ -36,7 +37,9 @@ export function Receipt({ record, explorerUrl }: { record: InvoiceRecord; explor
       {scheduled && <p className="small muted">{SNAPSHOT_NOTE}</p>}
       {tx && mock && (
         <p className="small muted" data-testid="mock-tx-note">
-          Example transaction: this app is running in demo mode, with no server and no chain, so this payment and its transaction hash are made up and cannot be found on the explorer.
+          {config.apiMode === 'mock'
+            ? 'Example transaction: this app is running in demo mode, with no server and no chain, so this payment and its transaction hash are made up and cannot be found on the explorer.'
+            : 'Simulated payment: the server is running a mock chain (CHAIN_MODE=mock), so no USDT moved and this transaction hash cannot be found on the explorer. Start the server with CHAIN_MODE=testnet to pay on Whitechain Sepolia.'}
         </p>
       )}
       <div className="btn-row">
