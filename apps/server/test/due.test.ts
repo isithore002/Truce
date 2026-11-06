@@ -350,3 +350,68 @@ describe("GET /api/invoices/:hash/health and POST /api/invoices/:hash/cancel", (
     expect(again.statusCode).toBe(422);
   });
 });
+
+describe("review fixes", () => {
+  it("refuses pay-now while a due-date payment is scheduled, and keeps the schedule intact", async () => {
+    const env = setup();
+    const { hash, doc } = await scheduled(env);
+    const res = await schedule(env.app, hash, wire(await makeAuth(doc, "now")));
+    expect(res.statusCode).toBe(409);
+    const rec = await env.store.get(hash as `0x${string}`);
+    expect(rec?.auth?.mode).toBe("due");
+    expect(rec?.status).toBe("SCHEDULED_OK");
+  });
+
+  it("a cancellation that was sent but is not confirmed yet answers 202 and later reads CANCELLED, not FAILED", async () => {
+    const env = setup();
+    const { hash, doc } = await scheduled(env);
+    const { ChainError } = await import("../src/chain/errors.js");
+    const real = env.chain.cancelAuthorization.bind(env.chain);
+    env.chain.cancelAuthorization = async (from, nonce, sig) => {
+      await real(from, nonce, sig); // the cancel really lands on the token...
+      throw new ChainError("PENDING", "sent but not confirmed", { txHash: `0x${"aa".repeat(32)}` }); // ...but we did not see it in time
+    };
+    const sig = await signCancelAuthorization(buyer, hash as `0x${string}`, tokenCtx);
+    const res = await env.app.inject({ method: "POST", url: `/api/invoices/${hash}/cancel`, payload: sig });
+    expect(res.statusCode).toBe(202);
+    expect(res.json().status).toBe("PENDING");
+    expect((await get(env.app, hash)).status).toBe("SCHEDULED_OK");
+    env.set(Number(doc.invoice.dueDate) + 1);
+    await env.scheduler.tick();
+    expect((await get(env.app, hash)).status).toBe("CANCELLED");
+  });
+
+  it("the scheduler claims an invoice before its first await, so the pay route cannot settle it at the same time", async () => {
+    const env = setup();
+    const { hash, doc } = await scheduled(env);
+    env.set(Number(doc.invoice.dueDate) + 1);
+    const seen: boolean[] = [];
+    const orig = env.chain.onchainStatus.bind(env.chain);
+    env.chain.onchainStatus = async (h) => {
+      seen.push(env.inFlight.has(hash));
+      return orig(h);
+    };
+    await env.scheduler.tick();
+    expect(seen).toEqual([true]);
+    expect(env.inFlight.has(hash)).toBe(false); // released afterwards
+  });
+
+  it("limits how fast one caller can create invoices", async () => {
+    const env = setup();
+    let last = 0;
+    for (let i = 0; i < 31; i++) {
+      const doc = await makeDoc();
+      last = (await env.app.inject({ method: "POST", url: "/api/invoices", payload: toWire(doc) })).statusCode;
+    }
+    expect(last).toBe(429);
+  });
+
+  it("writes on receipt, not 1970-01-01, in the CSV", async () => {
+    const env = setup();
+    const doc = await makeDoc({ dueDate: 0n });
+    await create(env.app, doc);
+    const csv = (await env.app.inject({ method: "GET", url: `/api/merchants/${doc.invoice.merchant}/export.csv` })).body;
+    expect(csv).toContain("on receipt");
+    expect(csv).not.toContain("1970-01-01");
+  });
+});

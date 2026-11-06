@@ -68,8 +68,13 @@ export class Scheduler {
       for (const rec of waiting) {
         if (rec.auth?.mode !== "due" || (rec.status !== "SCHEDULED_OK" && rec.status !== "AT_RISK")) continue;
         if (this.d.inFlight.has(rec.hash)) continue;
-        const outcome = await this.handle(rec, t);
-        if (outcome) out[outcome].push(rec.hash);
+        this.d.inFlight.add(rec.hash); // claimed before any await, so the HTTP route cannot settle the same invoice meanwhile
+        try {
+          const outcome = await this.handle(rec, t);
+          if (outcome) out[outcome].push(rec.hash);
+        } finally {
+          this.d.inFlight.delete(rec.hash);
+        }
       }
     } finally {
       this.running = false;
@@ -82,11 +87,16 @@ export class Scheduler {
     const rec = await this.d.store.get(hash);
     if (!rec || rec.auth?.mode !== "due" || (rec.status !== "SCHEDULED_OK" && rec.status !== "AT_RISK")) return "not_scheduled";
     if (this.d.inFlight.has(rec.hash)) return "retrying";
-    await this.d.store.update(rec.hash, (r) => {
-      if (r.schedule) r.schedule.nextAttemptAt = 0;
-    });
-    const outcome = await this.handle((await this.d.store.get(hash))!, this.d.now());
-    return outcome ?? "not_due";
+    this.d.inFlight.add(rec.hash);
+    try {
+      await this.d.store.update(rec.hash, (r) => {
+        if (r.schedule) r.schedule.nextAttemptAt = 0;
+      });
+      const outcome = await this.handle((await this.d.store.get(hash))!, this.d.now());
+      return outcome ?? "not_due";
+    } finally {
+      this.d.inFlight.delete(rec.hash);
+    }
   }
 
   private async handle(rec: InvoiceRecord, t: number): Promise<keyof TickResult | undefined> {
@@ -128,7 +138,6 @@ export class Scheduler {
       return "failed";
     }
 
-    this.d.inFlight.add(rec.hash);
     try {
       const { txHash } = await chain.settle(
         parsed.value,
@@ -152,13 +161,18 @@ export class Scheduler {
         return "retrying";
       }
       const skew = code === "AUTH_INVALID" && t - validAfter < SKEW_GRACE_SEC;
+      if (code === "AUTH_INVALID" && rec.events.some((ev) => ev.type === "cancel_pending")) {
+        await store.update(rec.hash, (r) => {
+          r.status = "CANCELLED";
+          r.events.push({ at: t, type: "cancelled", detail: "the buyer's cancellation landed" });
+        });
+        return undefined;
+      }
       if (FINAL.includes(code) || (code === "AUTH_INVALID" && !skew)) {
         await this.fail(rec, t, code, e instanceof Error ? e.message : "The payment could not be collected.");
         return "failed";
       }
       return this.retryLater(rec, t, code);
-    } finally {
-      this.d.inFlight.delete(rec.hash);
     }
   }
 

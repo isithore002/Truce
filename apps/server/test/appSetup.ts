@@ -19,6 +19,6 @@ export function setup(opts: { latencyMs?: number; authorizeWaitMs?: number } = {
   const inFlight = new Set<string>();
   const scheduler = new Scheduler({ store, chain, now: () => t, inFlight, marginSec: 0, retryBaseSec: 30, retryMaxSec: 600, healthEverySec: 60 });
   const app = buildApp({ chain, store, inFlight, collectNow: (h) => scheduler.collectNow(h), resolveDomain: async (d) => (d === DOMAIN ? domainFile : null), now: () => t, exampleMode: true, authorizeWaitMs: opts.authorizeWaitMs });
-  return { app, chain, store, scheduler, set: (v: number) => (t = v), advance: (s: number) => (t += s) };
+  return { app, chain, store, scheduler, inFlight, set: (v: number) => (t = v), advance: (s: number) => (t += s) };
 }
 

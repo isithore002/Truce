@@ -6,7 +6,7 @@ import { Checklist, ErrorNote, ExampleTag, InvoiceCard, Link, PinWarning, Schedu
 import { checkPin, loadPins, recordPin, type PinMap } from "../pinning";
 import { formatDateTime, formatUsdt, shortAddress } from "../format";
 import { canScheduleDue } from "../schedule";
-import { connect, currentAccount, ensureChain, tokenBalance, walletMessage, walletSigner } from "../wallet";
+import { connect, currentAccount, ensureChain, tokenBalance, walletMessage, walletSigner, watchAccounts } from "../wallet";
 
 type Step = "idle" | "signing" | "sending" | "waiting" | "cancelling";
 
@@ -49,6 +49,10 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
   useEffect(() => {
     void load();
     currentAccount().then(setAccount, () => undefined);
+    return watchAccounts((a) => {
+      setAccount(a);
+      setBalance(undefined);
+    });
   }, [load]);
 
   // When the buyer connects, re-check (the payer lock depends on who is paying) and read their balance.
@@ -157,7 +161,9 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
   const nowSec = Math.floor(Date.now() / 1000);
   const paid = view.status === "PAID";
   const expired = view.status === "EXPIRED";
-  const settled = view.status === "SCHEDULED_OK" || view.status === "AT_RISK" || view.status === "FAILED" || view.status === "CANCELLED";
+  const scheduledState = view.status === "SCHEDULED_OK" || view.status === "AT_RISK";
+  const pastExpiry = BigInt(nowSec) > inv.expiry;
+  const retryable = (view.status === "FAILED" || view.status === "CANCELLED") && !pastExpiry;
   const dueAvailable = canScheduleDue(inv.dueDate, nowSec);
   const effectiveMode: PaymentMode = mode === "due" && dueAvailable ? "due" : "now";
   const lowBalance = balance !== undefined && balance < inv.amount;
@@ -194,7 +200,7 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
             Anyone can confirm this on the <Link to={`/verify?hash=${hash}`}>public verify page</Link>.
           </p>
         </section>
-      ) : settled ? (
+      ) : scheduledState ? (
         <>
           <ScheduleStatus status={view.status} collectAt={view.schedule?.validAfter} healthReason={view.health?.reason} nowSec={nowSec} canCancel={canCancel} onCancel={() => void onCancel()} cancelBusy={step === "cancelling"} />
           {!account && (view.status === "SCHEDULED_OK" || view.status === "AT_RISK") && (
@@ -204,9 +210,14 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
           )}
           {payError && <ErrorNote>{payError}</ErrorNote>}
         </>
-      ) : expired ? (
-        <ErrorNote>This invoice has expired and can no longer be paid. Ask the merchant for a new one.</ErrorNote>
+      ) : expired || (view.status === "FAILED" && pastExpiry) || (view.status === "CANCELLED" && pastExpiry) ? (
+        <>
+          <ScheduleStatus status={view.status} healthReason={view.health?.reason} nowSec={nowSec} />
+          {expired && <ErrorNote>This invoice has expired and can no longer be paid. Ask the merchant for a new one.</ErrorNote>}
+        </>
       ) : (
+        <>
+        {retryable && <ScheduleStatus status={view.status} healthReason={view.health?.reason} nowSec={nowSec} />}
         <section className="card pay">
           <h2>{effectiveMode === "due" ? `Pay ${formatUsdt(inv.amount)} on the due date` : `Pay ${formatUsdt(inv.amount)}`}</h2>
           {dueAvailable && (
@@ -251,6 +262,7 @@ export default function Pay({ hash, config }: { hash: string; config?: Config })
           )}
           {payError && <ErrorNote>{payError}</ErrorNote>}
         </section>
+        </>
       )}
     </>
   );

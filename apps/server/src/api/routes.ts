@@ -3,7 +3,7 @@ import { concat, recoverTypedDataAddress, toHex, type Address, type Hex } from "
 import { cancelAuthorizationTypedData, invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc, verifyReceiveAuthorization, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib";
 import { RateLimiter } from "../chain/limits.js";
 import type { AppContext } from "./app.js";
-import { ApiError, type ApiErrorCode } from "./errors.js";
+import { ApiError } from "./errors.js";
 import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
@@ -17,7 +17,9 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
 
   app.get("/api/config", async () => ({ ...chain.config, exampleMode: ctx.exampleMode }));
 
+  const createLimiter = new RateLimiter(30, 60_000);
   app.post("/api/invoices", async (req, reply) => {
+    createLimiter.check(req.ip);
     const parsed = parseInvoiceDoc(req.body);
     if (!parsed.ok) throw new ApiError("INVALID_DOCUMENT", parsed.error);
     const doc = parsed.value;
@@ -144,11 +146,20 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     const auth = { mode: body.mode, from: body.from, validAfter: BigInt(body.validAfter), validBefore: BigInt(body.validBefore), v: body.v, r: body.r as Hex, s: body.s as Hex };
     if (body.mode === "due") return scheduleDue(rec, parsed.value, auth, reply);
 
+    if (rec.status === "SCHEDULED_OK" || rec.status === "AT_RISK") {
+      throw new ApiError("DUPLICATE", "A payment is already scheduled for this invoice. Cancel it first to pay now.");
+    }
+
     settling.add(hash);
-    await store.update(hash, (r) => {
-      r.auth = { ...body, r: body.r as Hex, s: body.s as Hex };
-      r.events.push({ at: ctx.now(), type: "authorized", detail: body.from });
-    });
+    try {
+      await store.update(hash, (r) => {
+        r.auth = { ...body, r: body.r as Hex, s: body.s as Hex };
+        r.events.push({ at: ctx.now(), type: "authorized", detail: body.from });
+      });
+    } catch (e) {
+      settling.delete(hash); // never leave the invoice locked if the write failed
+      throw e;
+    }
 
     type Outcome = { status: "PAID" | "PENDING"; txHash?: Hex };
     const work: Promise<Outcome> = (async () => {
@@ -205,7 +216,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     try {
       h = await chain.health(parsed.value, { mode: "due", from: a.from, validAfter: BigInt(a.validAfter), validBefore: BigInt(a.validBefore), v: a.v, r: a.r, s: a.s });
     } catch (e) {
-      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
+      throw e;
     }
     const now = ctx.now();
     const next = h.ok || h.reason === "AUTH_EXPIRING" ? "SCHEDULED_OK" : "AT_RISK";
@@ -241,7 +252,15 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     try {
       ({ txHash } = await chain.cancelAuthorization(rec.auth.from, hash, { v: sig.v, r: sig.r as Hex, s: sig.s as Hex }));
     } catch (e) {
-      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
+      if (e instanceof ChainError && e.code === "PENDING") {
+        // Sent but not confirmed yet. Remember it so the scheduler reports CANCELLED, not FAILED, once it lands.
+        const pendingTx = e.details?.txHash as Hex | undefined;
+        await store.update(hash, (x) => {
+          x.events.push({ at: ctx.now(), type: "cancel_pending", txHash: pendingTx });
+        });
+        return reply.status(202).send({ status: "PENDING", txHash: pendingTx });
+      }
+      throw e;
     }
     await store.update(hash, (x) => {
       x.status = "CANCELLED";
@@ -283,9 +302,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     if (!ok) throw new ApiError("AUTH_INVALID", "The payment authorization is not valid (wrong signature, amount or recipient).");
 
     // Snapshot, not a lock: the balance can still change before the due date.
-    const health = await chain.health(doc, auth).catch((e) => {
-      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
-    });
+    const health = await chain.health(doc, auth);
     if (health.reason === "LOW_BALANCE") {
       throw new ApiError("INSUFFICIENT_BALANCE", "Your balance is lower than this invoice right now, so a scheduled payment would fail. Add funds, then schedule again.", { balance: health.balance.toString() });
     }

@@ -40,7 +40,7 @@ export function invoicesToCsv(records: InvoiceRecord[], opts: { now: number; exp
       r.doc.details.clientName,
       formatUnits(BigInt(inv.amount), 6), // the allowlisted track USDT has 6 decimals
       "USDT",
-      isoDate(inv.dueDate).slice(0, 10),
+      BigInt(inv.dueDate) === 0n ? "on receipt" : isoDate(inv.dueDate).slice(0, 10),
       effectiveStatus(r, opts.now),
       r.payment ? isoDate(r.payment.paidAt) : "",
       r.payment?.payer ?? "",

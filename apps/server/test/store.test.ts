@@ -94,3 +94,23 @@ describe("JsonStore", () => {
     expect((await s.dueSoon(200)).map((r) => r.hash)).toEqual([H1]);
   });
 });
+
+describe("JsonStore write failures", () => {
+  it("one failed write does not stop later writes from reaching disk", async () => {
+    const dir = tmp();
+    const path = join(dir, "store.json");
+    const s = new JsonStore(path);
+    await s.create(rec(H1));
+    // Make the next write fail: a directory sits where the temp file must go.
+    const { mkdirSync, rmdirSync } = await import("node:fs");
+    mkdirSync(path + ".tmp");
+    await expect(s.create(rec(H2))).rejects.toBeTruthy();
+    rmdirSync(path + ".tmp");
+    await s.update(H1 as never, (r) => {
+      r.status = "PAID";
+    });
+    const onDisk = JSON.parse(readFileSync(path, "utf8")).invoices as InvoiceRecord[];
+    expect(onDisk.find((r) => r.hash === H1)?.status).toBe("PAID");
+    expect(onDisk.some((r) => r.hash === H2)).toBe(true); // the in-memory record was written by the later, successful write
+  });
+});

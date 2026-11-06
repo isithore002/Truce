@@ -88,13 +88,15 @@ export class JsonStore implements Store {
     if (!this.path) return Promise.resolve();
     const path = this.path;
     const snapshot = JSON.stringify({ version: 1, invoices: [...this.records.values()] }, null, 2);
-    this.queue = this.queue.then(async () => {
+    // `.catch` first: one failed write rejects only its own caller; later writes still run.
+    const run = this.queue.catch(() => undefined).then(async () => {
       mkdirSync(dirname(path), { recursive: true });
       if (++this.writes % BACKUP_EVERY === 0 && existsSync(path)) copyFileSync(path, `${path}.bak`);
       await writeFile(`${path}.tmp`, snapshot);
       await rename(`${path}.tmp`, path);
     });
-    return this.queue;
+    this.queue = run;
+    return run;
   }
 
   async get(hash: Hex) {

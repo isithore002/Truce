@@ -16,7 +16,7 @@ import {
   type InvoiceForm,
   type MerchantSettings,
 } from "../merchantLogic";
-import { connect, currentAccount, ensureChain, walletMessage, walletSigner } from "../wallet";
+import { connect, currentAccount, ensureChain, walletMessage, walletSigner, watchAccounts } from "../wallet";
 
 const store = () => (typeof localStorage === "undefined" ? undefined : localStorage);
 
@@ -40,6 +40,10 @@ export default function Merchant({ config }: { config?: Config }) {
 
   useEffect(() => {
     currentAccount().then(setAccount, () => undefined);
+    return watchAccounts((a) => {
+      setAccount(a);
+      setItems(undefined);
+    });
   }, []);
 
   useEffect(() => saveSettings(store(), settings), [settings]);

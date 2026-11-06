@@ -42,6 +42,15 @@ export async function currentAccount(): Promise<Address | undefined> {
   return accounts[0] ? getAddress(accounts[0]) : undefined;
 }
 
+/** Calls back when the user switches account in the wallet (or disconnects). Returns an unsubscribe function. */
+export function watchAccounts(cb: (account: Address | undefined) => void): () => void {
+  const provider = window.ethereum as (EIP1193Provider & { on?: (e: string, f: (a: string[]) => void) => void; removeListener?: (e: string, f: (a: string[]) => void) => void }) | undefined;
+  if (!provider?.on) return () => undefined;
+  const handler = (accounts: string[]) => cb(accounts[0] ? getAddress(accounts[0]) : undefined);
+  provider.on("accountsChanged", handler);
+  return () => provider.removeListener?.("accountsChanged", handler);
+}
+
 /** Switches to Whitechain Sepolia, adding it to the wallet first if the wallet does not know it. */
 export async function ensureChain(chainIdHex = WHITECHAIN_SEPOLIA.chainId): Promise<void> {
   const provider = getProvider();
