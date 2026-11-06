@@ -39,3 +39,7 @@ The two-developer split (chain side / product side) was dropped; one person now 
 - Replaced: ownership and PR rules with vertical slices, checkpoints C1 to C5 with tags, and clock-based cut gates (`WORKFLOW.md`).
 - Cut (removals under the change rule): webhooks, database (JSON-file store), Soul badge unless more than 2 hours are spare after C4.
 - Built first as a safety net: a script that settles one real USDT invoice (C1), so a working submission exists early.
+
+## Full scope authorised (2026-11-06)
+The developer asked for an autonomous run covering MUST + SHOULD + STRETCH (`docs/prompts/AUTONOMOUS-RUN.md`): merchant page, SDK and demo app, key pinning, refund (contract + tests, redeploy), due-date mode, health check and cancel, mocked Soul badge, docs, audit.
+This is the written exception to the scope-change rule. Refund UI stays out (contract + tests only). Hosting (T30) stays out. Progress is logged in `docs/AUTONOMOUS-LOG.md`.

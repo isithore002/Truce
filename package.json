@@ -16,7 +16,8 @@
     "setup:hooks": "git config core.hooksPath .githooks",
     "e2e": "tsx --env-file-if-exists=.env scripts/e2e-settle.ts",
     "server": "npm run start -w apps/server",
-    "e2e:api": "tsx --env-file-if-exists=.env scripts/e2e-api.ts"
+    "e2e:api": "tsx --env-file-if-exists=.env scripts/e2e-api.ts",
+    "test:all": "npm test -w @truce/invoice-lib -w @truce/server -w @truce/web --if-present && npm test -w @truce/sdk --if-present && cd contracts && forge test"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
