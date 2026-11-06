@@ -6,6 +6,7 @@ import { Icon, Logo } from '../Icon';
 import { ExampleBanner } from './ExampleBanner';
 import { LimitsFooter } from './LimitsFooter';
 import { NetworkBadge } from './NetworkBadge';
+import { MockModeBanner } from './MockModeBanner';
 import { ScenarioBar } from './ScenarioBar';
 import { WalletButton } from './WalletButton';
 
@@ -60,6 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <span className="nav__progress" aria-hidden="true" style={{ transform: `scaleX(${progress})` }} />
       </header>
+      <MockModeBanner />
       <ExampleBanner />
       {config.demoTools && config.apiMode === 'mock' && <ScenarioBar />}
       <main id="main" tabIndex={-1}>{children}</main>

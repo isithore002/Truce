@@ -162,3 +162,6 @@ a.card:hover { transform: translateY(-2px); border-color: var(--p-line-strong); 
 .scenario-bar a { color: var(--p-inv-ink); }
 .nav__progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--p-gold); transform-origin: left; transform: scaleX(0); pointer-events: none; }
 .logo svg { flex: none; }
+.mock-band { background: var(--bad-bg, #fbe9e7); color: var(--bad, #b3261e); border-bottom: 1px solid rgba(179, 38, 30, .25); font-size: var(--t-small); }
+.mock-band .wrap { display: flex; gap: var(--s-2); align-items: center; min-height: 40px; padding-top: 6px; padding-bottom: 6px; }
+.mock-band strong { font-weight: 600; letter-spacing: 0.02em; }
