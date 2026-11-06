@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildApp } from "./api/app.js";
 import { createChain } from "./chain/index.js";
-import { createDomainResolver } from "./domain/resolver.js";
+import { createDomainChecker, createDomainResolver } from "./domain/resolver.js";
 import { Scheduler } from "./scheduler.js";
 import { JsonStore } from "./shared/store.js";
 
@@ -27,6 +27,7 @@ const app = buildApp({
   inFlight,
   collectNow: (hash) => scheduler.collectNow(hash),
   resolveDomain: createDomainResolver({ demoDomains: demo }),
+  checkDomain: createDomainChecker({ demoDomains: demo }),
   publicBaseUrl: env.PUBLIC_BASE_URL || "http://localhost:5173",
   webOrigin: env.WEB_ORIGIN || "http://localhost:5173",
   exampleMode: demo,

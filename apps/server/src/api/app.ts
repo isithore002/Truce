@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { DomainResolver } from "@truce/invoice-lib";
 import type { Hex } from "viem";
 import type { ChainModule } from "../chain/types.js";
+import type { FetchResult } from "../domain/fetchDomainFile.js";
 import type { Store } from "../shared/store.js";
 import { errorBody, errorHandler } from "./errors.js";
 import { registerRoutes } from "./routes.js";
@@ -11,6 +12,8 @@ export interface AppDeps {
   store: Store;
   /** Fetches a merchant's /.well-known/truce.json (SSRF-guarded in production). */
   resolveDomain: DomainResolver;
+  /** Fresh, uncached read of a domain file with the failure reason, for the setup page's check. Defaults to resolveDomain. */
+  checkDomain?: (domain: string) => Promise<FetchResult>;
   /** Unix seconds. Injectable so tests can move time. */
   now?: () => number;
   /** Where payment links point (the web app). */
@@ -28,7 +31,7 @@ export interface AppDeps {
   logger?: boolean;
 }
 
-export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs" | "inFlight">> {
+export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "checkDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs" | "inFlight">> {
   collectNow?: (hash: Hex) => Promise<string>;
 }
 
@@ -38,6 +41,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     chain: deps.chain,
     store: deps.store,
     resolveDomain: deps.resolveDomain,
+    checkDomain:
+      deps.checkDomain ??
+      (async (d) => {
+        const value = await deps.resolveDomain(d);
+        return value === null || value === undefined ? { ok: false, reason: "no file found there" } : { ok: true, value };
+      }),
     now: deps.now ?? (() => Math.floor(Date.now() / 1000)),
     publicBaseUrl: (deps.publicBaseUrl ?? "http://localhost:5173").replace(/\/$/, ""),
     exampleMode: deps.exampleMode ?? false,

@@ -8,7 +8,9 @@ import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
 import { ledgerEntries, ledgerToCsv } from "./ledger.js";
-import { AddressParam, AuthorizeBody, CancelBody, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
+import { normalizeDomain } from "../domain/ssrfGuard.js";
+import { evaluateDomainFile } from "./domainCheck.js";
+import { AddressParam, AuthorizeBody, CancelBody, DomainCheckQuery, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
 import { effectiveStatus, summarize } from "./status.js";
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -112,6 +114,17 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     verifyLimiter.check(req.ip);
     const q = VerifyQuery.parse(req.query);
     return runVerify(req.body, q.buyer);
+  });
+
+  // Setup page: "does the file on my domain list the wallets I am about to use?". It makes the server fetch a
+  // merchant-chosen domain, so it uses the same SSRF-guarded fetch as verification and is rate limited per caller.
+  const domainCheckLimiter = new RateLimiter(20, 60_000);
+  app.get("/api/domain-check", async (req) => {
+    domainCheckLimiter.check(req.ip);
+    const q = DomainCheckQuery.parse(req.query);
+    const domain = normalizeDomain(q.domain);
+    if (!domain) throw new ApiError("INVALID_DOCUMENT", "That is not a valid public domain name, for example acme.com.");
+    return evaluateDomainFile(await ctx.checkDomain(domain), { domain, signer: q.signer, payout: q.payout, chainId: chain.config.chainId });
   });
 
   app.get("/api/merchants/:address/invoices", async (req) => {

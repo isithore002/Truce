@@ -45,6 +45,22 @@ export const VerifyQuery = z.object({
   buyer: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "buyer must be an address").optional(),
 });
 
+const address = (name: string) => z.string().transform((a, ctx): Address => {
+  try {
+    return getAddress(a);
+  } catch {
+    ctx.addIssue({ code: "custom", message: `${name} is not a valid address` });
+    return z.NEVER;
+  }
+});
+
+/** Setup page: which domain to read and which wallets the merchant intends to use. */
+export const DomainCheckQuery = z.object({
+  domain: z.string().min(1).max(253),
+  signer: address("signer"),
+  payout: address("payout"),
+});
+
 /** The payout wallet's signed refund authorization. The amount is in token base units (USDT has 6 decimals). */
 export const RefundBody = z.object({
   amount: uintString,
