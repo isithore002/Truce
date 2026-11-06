@@ -1,5 +1,5 @@
 import { useApp } from '../../app/AppContext';
-import { explorerAddress, explorerTx } from '../../lib/config';
+import { config, explorerAddress, explorerTx } from '../../lib/config';
 import { shortAddress } from '../../lib/format';
 import { Icon } from '../Icon';
 
@@ -26,7 +26,7 @@ export function AddressChip({ value, kind = 'address', label, explorer = true }:
       >
         <Icon name="copy" />
       </button>
-      {explorer && href && (
+      {explorer && href && !(kind === 'tx' && config.apiMode === 'mock') && ( // mock transaction hashes are made up: no link to a page that cannot find them
         <a className="icon-btn" href={href} target="_blank" rel="noreferrer" aria-label={`Open ${what} in the Whitechain explorer (new tab)`}>
           <Icon name="external" />
         </a>
