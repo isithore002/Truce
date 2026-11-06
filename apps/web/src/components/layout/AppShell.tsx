@@ -62,10 +62,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="nav__progress" aria-hidden="true" style={{ transform: `scaleX(${progress})` }} />
       </header>
       <MockModeBanner />
-      <ExampleBanner />
       {config.demoTools && config.apiMode === 'mock' && <ScenarioBar />}
       <main id="main" tabIndex={-1}>{children}</main>
       <LimitsFooter />
+      {/* small, fixed at the bottom of every page: still always visible (CLAUDE.md rule 4) */}
+      <ExampleBanner />
     </div>
   );
 }

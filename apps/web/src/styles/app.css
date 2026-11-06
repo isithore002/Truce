@@ -260,3 +260,5 @@
 .tech-details > summary { cursor: pointer; color: var(--p-muted); font-size: var(--t-small); width: fit-content; }
 .tech-details > summary:hover, .tech-details > summary:focus-visible { color: var(--p-ink, inherit); }
 .tech-details[open] > summary { margin-bottom: var(--s-3); }
+.verify-input-row { flex-wrap: nowrap; align-items: stretch; }
+@media (max-width: 639px) { .verify-input-row { flex-wrap: wrap; } .verify-input-row > .btn { width: 100%; } }

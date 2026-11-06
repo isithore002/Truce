@@ -66,7 +66,7 @@ export function VerifyPage() {
       <form className="card stack" onSubmit={onSubmit} noValidate style={{ marginBottom: 'var(--s-6)' }}>
         <div className="field">
           <label htmlFor="verify-input">Payment link or invoice hash</label>
-          <div className="row" style={{ flexWrap: 'nowrap', alignItems: 'stretch' }}>
+          <div className="row verify-input-row">
             <input
               id="verify-input"
               className="input input--mono grow"
