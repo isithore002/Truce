@@ -1,0 +1,158 @@
+/**
+ * Opt-in smoke test: the web app's own HTTP client, response mapping and typed-data seam against a RUNNING apps/server.
+ * Skipped unless SMOKE_API is set, so `npm test` stays offline.
+ *
+ *   DEMO_DOMAINS=1 PORT=8790 npm run server            (terminal 1, mock chain; keys are only needed for the signers below)
+ *   npm run smoke:web                                  (terminal 2, from the repo root)
+ *
+ * Signs as the Northlight example merchant (MERCHANT_PK) and as the buyer (PAYER_PK), both throwaway keys from .env.
+ * This is what the pages do minus the browser wallet: the same invoiceLib calls build the typed data, the same httpApi sends it.
+ */
+import { privateKeyToAccount } from 'viem/accounts';
+import type { Hex } from 'viem';
+import { describe, expect, it } from 'vitest';
+import { ApiError, httpApi } from '../lib/api/client';
+import { invoiceLib } from '../lib/invoiceLib';
+import { ZERO_ADDRESS, type Address, type Invoice, type InvoiceDetails, type InvoiceDoc } from '../lib/api/types';
+
+const run = !!process.env.SMOKE_API;
+const DOMAIN = 'northlight-design.example';
+const DAY = 86400;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function account(name: 'MERCHANT_PK' | 'PAYER_PK') {
+  const k = process.env[name];
+  if (!k || !/^0x[0-9a-fA-F]{64}$/.test(k)) throw new Error(`${name} is missing (run with node --env-file=.env)`);
+  return privateKeyToAccount(k as Hex);
+}
+
+describe.skipIf(!run)('web client against apps/server', () => {
+  const merchant = run ? account('MERCHANT_PK') : undefined!;
+  const buyer = run ? account('PAYER_PK') : undefined!;
+
+  async function makeDoc(dueInSeconds: number, label: string, payout?: Address) {
+    const cfg = await httpApi.getConfig();
+    const details: InvoiceDetails = {
+      merchantName: 'Northlight Design Studio', clientName: 'Beta Labs',
+      lineItems: [{ description: `${label} (EXAMPLE DATA)`, quantity: '1', unitPrice: '10000' }],
+      notes: 'EXAMPLE DATA. Smoke test.', example: true,
+    };
+    const due = Math.floor(Date.now() / 1000) + dueInSeconds;
+    const invoice: Invoice = {
+      invoiceId: invoiceLib.newInvoiceId(), merchant: merchant.address, payout: payout ?? (await payoutFromDomain()), token: cfg.token,
+      amount: '10000', dueDate: String(due), expiry: String(due + DAY), payer: ZERO_ADDRESS,
+      domainHash: invoiceLib.domainHash(DOMAIN), memoHash: invoiceLib.memoHash(details),
+    };
+    const ctx = { chainId: cfg.chainId, settler: cfg.settler };
+    const signature = await merchant.signTypedData(invoiceLib.invoiceTypedData(invoice, ctx) as never);
+    const doc: InvoiceDoc = { version: 1, invoice, signature, domain: DOMAIN, details };
+    return { cfg, doc, hash: invoiceLib.invoiceHash(invoice, ctx) };
+  }
+
+  // The fixture's first payout wallet, as the setup page would offer it.
+  async function payoutFromDomain(): Promise<Address> {
+    const fx = await import('node:fs').then((fs) =>
+      JSON.parse(fs.readFileSync(new URL('../../../../fixtures/domains/northlight-design.example.json', import.meta.url), 'utf8')),
+    );
+    return fx.payoutAddresses[0] as Address;
+  }
+
+  async function pollStatus(hash: Hex, want: string, tries = 40) {
+    for (let i = 0; i < tries; i++) {
+      const rec = await httpApi.getInvoice(hash);
+      if (rec.status === want) return rec;
+      await sleep(500);
+    }
+    throw new Error(`invoice never reached ${want}`);
+  }
+
+  it('maps /api/config and /healthz', async () => {
+    const cfg = await httpApi.getConfig();
+    expect(cfg.chainId).toBe(1874);
+    expect(cfg.settler).toMatch(/^0x[0-9a-fA-F]{40}$/);
+    expect(cfg.token).toMatch(/^0x[0-9a-fA-F]{40}$/);
+    expect(cfg.exampleMode).toBe(true);
+    const h = await httpApi.healthz();
+    expect(h.ok).toBe(true);
+    expect(['mock', 'testnet']).toContain(h.chainMode);
+  });
+
+  it('create, get, verify, pay now, list and CSV', async () => {
+    const { cfg, doc, hash } = await makeDoc(30 * DAY, 'Smoke pay now');
+    const created = await httpApi.createInvoice(doc);
+    expect(created.hash).toBe(hash); // server hash equals the hash the page computed with invoice-lib
+
+    const rec = await httpApi.getInvoice(hash);
+    expect(rec.status).toBe('ISSUED');
+    expect(rec.doc.invoice.payout.toLowerCase()).toBe(doc.invoice.payout.toLowerCase());
+
+    const v = await httpApi.verifyHash(hash);
+    expect(v.result).toBe('PASS');
+    expect(v.checks.length).toBe(10);
+
+    const { typed, validAfter, validBefore } = invoiceLib.receiveWithAuthorizationTypedData({
+      invoice: doc.invoice, invoiceHash: hash, from: buyer.address, settler: cfg.settler, mode: 'now', chainId: cfg.chainId,
+    });
+    const sig = invoiceLib.splitSignature(await buyer.signTypedData(typed as never));
+    const res = await httpApi.authorize(hash, { mode: 'now', from: buyer.address, validAfter, validBefore, ...sig });
+    expect(['PAID', 'PENDING']).toContain(res.status);
+
+    const paid = await pollStatus(hash, 'PAID');
+    expect(paid.tx?.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    expect(paid.tx?.payer?.toLowerCase()).toBe(buyer.address.toLowerCase());
+    expect(paid.events?.length).toBeGreaterThan(0);
+
+    const list = await httpApi.listMerchantInvoices(merchant.address);
+    const row = list.find((r) => r.hash === hash);
+    expect(row?.status).toBe('PAID');
+    expect(row?.txHash).toBeTruthy();
+
+    const csv = await (await httpApi.exportCsv(merchant.address)).text();
+    expect(csv).toContain(doc.invoice.invoiceId.slice(2));
+
+    // A second payment is refused with a code the UI has a message for.
+    await expect(httpApi.authorize(hash, { mode: 'now', from: buyer.address, validAfter, validBefore, ...sig })).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('a swapped payout copy FAILS verification and is refused at create (the #doc link attack)', async () => {
+    const { doc } = await makeDoc(30 * DAY, 'Smoke swapped');
+    const swapped: InvoiceDoc = { ...doc, invoice: { ...doc.invoice, payout: '0x000000000000000000000000000000000000dEaD' } };
+    const v = await httpApi.verifyDoc(swapped);
+    expect(v.result).toBe('FAIL');
+    const failed = v.checks.filter((c) => !c.ok).map((c) => c.id);
+    expect(failed).toContain('signature_valid');
+    expect(failed).toContain('payout_in_domain_file');
+    const err = await httpApi.createInvoice(swapped).catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe('SIGNATURE_INVALID');
+  });
+
+  it('a payout the merchant key signed but never listed in truce.json FAILS the domain check', async () => {
+    const { doc } = await makeDoc(30 * DAY, 'Smoke unlisted payout', '0x000000000000000000000000000000000000dEaD');
+    const v = await httpApi.verifyDoc(doc); // validly signed, so only the domain-file check can catch it
+    expect(v.result).toBe('FAIL');
+    const failed = v.checks.filter((c) => !c.ok).map((c) => c.id);
+    expect(failed).toEqual(['payout_in_domain_file']);
+  });
+
+  it('pay on the due date, then cancel', async () => {
+    const { cfg, doc, hash } = await makeDoc(10 * 60, 'Smoke scheduled');
+    await httpApi.createInvoice(doc);
+    const { typed, validAfter, validBefore } = invoiceLib.receiveWithAuthorizationTypedData({
+      invoice: doc.invoice, invoiceHash: hash, from: buyer.address, settler: cfg.settler, mode: 'due', chainId: cfg.chainId,
+    });
+    const sig = invoiceLib.splitSignature(await buyer.signTypedData(typed as never));
+    const res = await httpApi.authorize(hash, { mode: 'due', from: buyer.address, validAfter, validBefore, ...sig });
+    expect(res.status).toBe('SCHEDULED_OK');
+
+    const scheduled = await httpApi.getInvoice(hash);
+    expect(scheduled.status).toBe('SCHEDULED_OK');
+    expect(scheduled.mode).toBe('due');
+
+    const cancelTyped = invoiceLib.cancelAuthorizationTypedData({ token: doc.invoice.token, chainId: cfg.chainId, authorizer: buyer.address, nonce: hash });
+    const out = await httpApi.cancel(hash, invoiceLib.splitSignature(await buyer.signTypedData(cancelTyped as never)));
+    expect(out.txHash).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    const after = await pollStatus(hash, 'CANCELLED');
+    expect(after.status).toBe('CANCELLED');
+  });
+});

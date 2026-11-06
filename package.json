@@ -20,7 +20,8 @@
     "test:all": "npm test -w @truce/invoice-lib -w @truce/server -w @truce/web --if-present && npm test -w @truce/sdk --if-present && cd contracts && forge test",
     "count:sdk-lines": "npm run count -w @truce/merchant-demo",
     "e2e:refund": "tsx --env-file-if-exists=.env scripts/e2e-refund.ts",
-    "e2e:due": "tsx --env-file-if-exists=.env scripts/e2e-due.ts"
+    "e2e:due": "tsx --env-file-if-exists=.env scripts/e2e-due.ts",
+    "smoke:web": "node --env-file-if-exists=.env tools/smoke-web.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
