@@ -40,7 +40,7 @@ BLOCKED or SKIPPED items: none. The redeploy succeeded first time.
 
 Note: from Git Bash, `npx tsc` inside a workspace folder resolved the unrelated `tsc` npm package on this machine. Use `npm run build -w <workspace>`; it works.
 
-Live runs on the redeployed contract: `npm run e2e -- --attack-only`, `npm run e2e`, `npm run e2e:api` (11/11), `npm run e2e:refund`, `npm run e2e:due`. After the review fixes the API and due-date scripts were rerun against a **mock** server (pass), not against the testnet again.
+Live runs on the redeployed contract: `npm run e2e -- --attack-only`, `npm run e2e`, `npm run e2e:api` (11/11), `npm run e2e:refund`, `npm run e2e:due`. After the review fixes the API and due-date scripts were rerun against a mock server and then, later on 2026-11-06, against the **live testnet** with the final code: `npm run e2e:api` passed 11/11 (settle [0x440a1268...6e87](https://explorer.testnet.whitechain.io/tx/0x440a1268a4e734f39014cdd24a41e84b0f758b6a24499b2668838fd855146e87)) and `npm run e2e:due` passed (collection [0x6e48afc0...93c0](https://explorer.testnet.whitechain.io/tx/0x6e48afc0ff3a73491e6a955ee9b87a229314a157366f34c90c60b133b1c793c0), cancel [0x7dec29c9...51dc](https://explorer.testnet.whitechain.io/tx/0x7dec29c926225152065931f0e5c0f32c964cd6db2411218d8d863e142c2851dc)). All three read `ok` on Blockscout.
 
 NOT TESTED live: the AT_RISK and FAILED collection paths (need a drained real buyer wallet); they are covered with the mock chain and a fake clock.
 

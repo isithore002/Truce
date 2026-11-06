@@ -46,3 +46,8 @@ Started 2026-11-06. Plan: `docs/prompts/AUTONOMOUS-RUN.md`. One line per task: i
 - Secrets scan of history: clean. All 9 README/feedback transactions confirmed `success` via Blockscout; both contracts verified.
 - Radar rerun and overlap note done in phase 8.
 - `docs/AUDIT.md` written. Verdict: READY WITH CAVEATS (browser click-through, video and submission are human steps).
+
+## Post-audit: live rerun on the final code (2026-11-06)
+- `CHAIN_MODE=testnet` server on port 8788, then `npm run e2e:api` (11/11 PASS) and `npm run e2e:due` (PASS: collection, buyer cancel, cancelled invoice never collected).
+- Transactions, all `ok` on Blockscout: settle 0x440a1268...6e87, cancelAuthorization 0x7dec29c9...51dc, settle (due-date collection) 0x6e48afc0...93c0.
+- Still not run live: AT_RISK and FAILED collection (fake-clock tests only). Browser click-through not possible from this session (no browser tools).
