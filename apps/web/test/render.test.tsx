@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { InvoiceDocWire } from "@truce/invoice-lib";
-import type { VerifyView } from "../src/api";
-import { Checklist, ExampleTag, InvoiceCard } from "../src/components";
+import type { InvoiceSummary, VerifyView } from "../src/api";
+import { Checklist, ExampleTag, InvoiceCard, InvoiceTable } from "../src/components";
+import Merchant from "../src/pages/Merchant";
 
 const ids = [
   "document_valid",
@@ -100,5 +101,50 @@ describe("InvoiceCard", () => {
 describe("ExampleTag", () => {
   it("is labelled EXAMPLE DATA", () => {
     expect(renderToStaticMarkup(<ExampleTag />)).toContain("EXAMPLE DATA");
+  });
+});
+
+describe("InvoiceTable", () => {
+  const item = {
+    hash: "0x" + "ab".repeat(32),
+    invoiceId: "0x" + "00".repeat(32),
+    merchantName: "Northlight Design Studio",
+    clientName: "Beta Labs",
+    amount: "1250000000",
+    token: "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7",
+    dueDate: "0",
+    expiry: "1767484800",
+    status: "PAID",
+    txHash: "0x" + "cd".repeat(32),
+    createdAt: 1,
+    example: true,
+  } as unknown as InvoiceSummary;
+
+  it("shows an empty state", () => {
+    expect(renderToStaticMarkup(<InvoiceTable items={[]} explorerBase="https://x" />)).toContain("No invoices yet");
+  });
+  it("shows status, amount, example tag and an explorer link for a paid invoice", () => {
+    const html = renderToStaticMarkup(<InvoiceTable items={[item]} explorerBase="https://explorer.example" />);
+    expect(html).toContain("Beta Labs");
+    expect(html).toContain("1,250.00 USDT");
+    expect(html).toContain("On receipt");
+    expect(html).toContain("pill pass");
+    expect(html).toContain("EXAMPLE DATA");
+    expect(html).toContain(`https://explorer.example/tx/${item.txHash}`);
+  });
+  it("has no transaction link while unpaid and escapes hostile client names", () => {
+    const html = renderToStaticMarkup(<InvoiceTable items={[{ ...item, status: "ISSUED", txHash: undefined, clientName: "<script>x</script>" }]} explorerBase="https://e" />);
+    expect(html).not.toContain("Transaction");
+    expect(html).toContain("Awaiting payment");
+    expect(html).not.toContain("<script>");
+  });
+});
+
+describe("Merchant page", () => {
+  it("asks to connect a wallet first and labels example mode", () => {
+    const cfg = { chainId: 1874, settler: "0x0000000000000000000000000000000000001234", tokens: [], explorerBase: "https://e", exampleMode: true } as never;
+    const html = renderToStaticMarkup(<Merchant config={cfg} />);
+    expect(html).toContain("Connect your signing wallet");
+    expect(html).toContain("EXAMPLE DATA");
   });
 });

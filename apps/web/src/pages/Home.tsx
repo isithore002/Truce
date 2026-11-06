@@ -16,6 +16,13 @@ export default function Home() {
             Verify an invoice
           </Link>
         </section>
+        <section className="card">
+          <h2>Send invoices?</h2>
+          <p>Connect your wallet, publish a small file on your website, sign invoices and watch them get paid. Export everything as CSV.</p>
+          <Link to="/merchant" className="button">
+            Merchant page
+          </Link>
+        </section>
       </div>
     </>
   );

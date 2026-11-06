@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, ApiFailure, type Config } from "./api";
 import { Link } from "./components";
 import { match, usePath } from "./router";
+import Merchant from "./pages/Merchant";
 import Home from "./pages/Home";
 import Pay from "./pages/Pay";
 import Verify from "./pages/Verify";
@@ -30,12 +31,13 @@ export default function App() {
         </Link>
         <nav>
           <Link to="/verify">Verify an invoice</Link>
+          <Link to="/merchant">Merchant</Link>
         </nav>
         <span className="net">Whitechain Sepolia (testnet)</span>
       </header>
       <main className="page">
         {configError && <div className="error-note">{configError}</div>}
-        {payParams ? <Pay hash={payParams.hash} config={config} /> : path === "/verify" ? <Verify config={config} /> : <Home />}
+        {payParams ? <Pay hash={payParams.hash} config={config} /> : path === "/verify" ? <Verify config={config} /> : path === "/merchant" ? <Merchant config={config} /> : <Home />}
       </main>
       <footer className="footer">
         A signed payment authorization is a commitment, not locked funds, and the balance check is a snapshot, not a lock. Testnet only.

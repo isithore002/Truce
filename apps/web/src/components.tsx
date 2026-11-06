@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { CheckId, InvoiceDocWire } from "@truce/invoice-lib";
-import type { VerifyView } from "./api";
+import type { InvoiceSummary, VerifyView } from "./api";
 import { formatDate, formatUsdt } from "./format";
 import { navigate } from "./router";
 
@@ -122,6 +122,67 @@ export function ErrorNote({ children }: { children: ReactNode }) {
   return (
     <div className="error-note" role="alert">
       {children}
+    </div>
+  );
+}
+
+const STATUS_TEXT: Record<InvoiceSummary["status"], string> = {
+  ISSUED: "Awaiting payment",
+  SCHEDULED_OK: "Scheduled",
+  AT_RISK: "At risk",
+  PAID: "Paid",
+  FAILED: "Failed",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+};
+
+export function StatusPill({ status }: { status: InvoiceSummary["status"] }) {
+  const tone = status === "PAID" ? "pass" : status === "FAILED" || status === "EXPIRED" || status === "CANCELLED" ? "fail" : status === "AT_RISK" ? "warn" : "info";
+  return <span className={`pill ${tone}`}>{STATUS_TEXT[status]}</span>;
+}
+
+/** The merchant's invoice list: status, amount, dates, and links to the pay page and the payment on the explorer. */
+export function InvoiceTable({ items, explorerBase }: { items: InvoiceSummary[]; explorerBase: string }) {
+  if (items.length === 0) return <p className="muted">No invoices yet. Create the first one above.</p>;
+  return (
+    <div className="table-wrap">
+      <table className="lines invoices">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th className="num">Amount</th>
+            <th>Due</th>
+            <th>Status</th>
+            <th>Links</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((i) => (
+            <tr key={i.hash} data-hash={i.hash}>
+              <td>
+                {i.clientName} {i.example && <ExampleTag />}
+              </td>
+              <td className="num">{formatUsdt(i.amount)}</td>
+              <td>{i.dueDate === "0" ? "On receipt" : formatDate(i.dueDate)}</td>
+              <td>
+                <StatusPill status={i.status} />
+              </td>
+              <td>
+                <Link to={`/pay/${i.hash}`}>Pay page</Link> · <Link to={`/verify?hash=${i.hash}`}>Verify</Link>
+                {i.txHash && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <a href={`${explorerBase}/tx/${i.txHash}`} target="_blank" rel="noreferrer">
+                      Transaction
+                    </a>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

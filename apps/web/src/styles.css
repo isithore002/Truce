@@ -89,3 +89,16 @@ textarea { width: 100%; font-family: ui-monospace, Menlo, Consolas, monospace; f
   .topbar { flex-wrap: wrap; gap: 0.6rem 1rem; }
   .amount { font-size: 1.5rem; }
 }
+
+.pill { display: inline-block; font-size: 0.8rem; font-weight: 700; border-radius: 999px; padding: 0.1rem 0.6rem; border: 1px solid; white-space: nowrap; }
+.pill.pass { color: var(--pass); background: var(--pass-bg); border-color: var(--pass); }
+.pill.fail { color: var(--fail); background: var(--fail-bg); border-color: var(--fail); }
+.pill.warn { color: #7a4b00; background: var(--warn-bg); border-color: #e0b800; }
+.pill.info { color: var(--accent); background: #eaf0ff; border-color: var(--accent); }
+.table-wrap { overflow-x: auto; }
+.form-grid { display: grid; gap: 0.8rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+input[type="text"], input[type="date"], input[type="number"] { width: 100%; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.6rem; }
+.line-row { display: grid; gap: 0.5rem; grid-template-columns: 3fr 1fr 1.4fr auto; margin-bottom: 0.5rem; align-items: center; }
+.total { font-size: 1.3rem; font-weight: 800; margin: 0.6rem 0; }
+pre.file { background: #0f1420; color: #e6edf7; border-radius: 8px; padding: 0.8rem; overflow-x: auto; font-size: 0.85rem; }
+.hint { font-size: 0.9rem; color: var(--muted); }
