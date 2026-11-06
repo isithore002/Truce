@@ -58,10 +58,10 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [x] Gate 1 read-only PASS (domain name/version resolved)
 - [x] S0: Gate 1 LIVE PASS 2026-11-06 (redeem, replay/payee/window rejections, signed cancel; recorded in `WHITECHAIN_FEEDBACK.md`)
 - [x] C1 safety net DONE 2026-11-06 (tag `c1`): `InvoiceSettler` `0xB1e1c081D5FB009D8f908b220D902E9F98dfbFE7` verified on 1874, one real 0.01 USDT settlement (tx `0xed25b41a...88fb`), swapped payout rejected. Also done: invoice-lib incl. verify pipeline (T08 to T10), chain module real + mock (T11, T11b). Server routes T14 to T16 done (create/get/list, verify, pay-now authorize, CSV, /healthz, SSRF-guarded domain fetch; run `npm run server` then `npm run e2e:api`). Web app T17 to T19 built (shell + EXAMPLE DATA banner, verify page, buyer pay page with wallet signing): run `npm run server` and `npm run dev -w apps/web`, open http://localhost:5173. NOT yet checked in a real browser with a wallet. Next: that manual check, then T20 merchant page (C3).
-- [ ] C2 (about 23:20 Nov 6; 50% Go/No-Go about 16:25): browser flow: PASS then pay now; swapped payout shows FAIL; verify page
-- [ ] C3 (about 02:05 Nov 7): merchant dashboard, CSV, SDK, example merchant demo app
-- [ ] C4 = FEATURE FREEZE (about 03:05 Nov 7): key pinning (MUST); due-date mode, health check, cancel, refund only if ahead of schedule
-- [ ] C5 (by 08:00 Nov 7): README, `WHITECHAIN_FEEDBACK.md`, demo video (2-4 min), radar rerun, `npm run check:commits`, submit (Whitechain selected)
+- [x] C2 built and tested 2026-11-06 (tag `c2`): buyer page PASS/FAIL, pay now, verify page, API e2e live. The interactive wallet flow has NOT been clicked through in a browser (human check, see `docs/SUBMISSION-CHECKLIST.md`).
+- [x] C3 DONE 2026-11-06 (tag `c3`): merchant page, CSV, SDK (`createInvoice`), example app with 10 lines of integration code.
+- [x] C4 DONE (tag `c4`): key pinning. Also built after it: capped refund (contract, tests, redeploy `0xCbe41B98D2333a1BD92d51Fbb6FE668c5170ff9d`, live check), due-date mode with scheduler, health check and buyer cancel (live checks), mocked Soul badge. Autonomous run log: `docs/AUTONOMOUS-LOG.md`.
+- [ ] C5 (by 08:00 Nov 7): README and `WHITECHAIN_FEEDBACK.md` written, `docs/AUDIT.md` written; STILL TO DO BY THE DEVELOPER: browser click-through, demo video (2-4 min), radar rerun check, ETHGlobal submission with Whitechain selected (`docs/SUBMISSION-CHECKLIST.md`).
 
 ## Open items (do not block)
 Soul registry owner key (README open question); whether other entries appear with domain verification (radar).

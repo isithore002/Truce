@@ -71,13 +71,15 @@ Conventions: JSON; addresses checksummed; hashes lowercase `0x`; big numbers as 
 | `_payments[hash]` slot A | `payer` (20 bytes) + `paidAt` (uint64) |
 | slot B | `payout` (20 bytes) |
 | slot C | `amount` (uint128) + `refunded` (uint128) |
+| slot D | `token` (address; added so a refund pulls the right token; read it with `paidToken(hash)`) |
 | `tokenAllowed[token]` | bool |
 OpenZeppelin bases add `_owner`, `_paused`, reentrancy status; `EIP712` uses immutables.
 
 **Functions**
 - `settle(Invoice inv, bytes merchantSig, Auth a)`: external, `nonReentrant`, `whenNotPaused`. Order: expiry -> token allowed -> payer lock -> unpaid -> `SignatureChecker.isValidSignatureNow(inv.merchant, digest, merchantSig)` (EOA or ERC-1271) -> **record payment first** -> `receiveWithAuthorization(a.from, address(this), inv.amount, a.validAfter, a.validBefore, digest, a.v, a.r, a.s)` -> require the contract's balance rose by exactly `amount` (rejects fee-on-transfer tokens) -> `safeTransfer(inv.payout, amount)` -> emit. Also reject `amount == 0` and `payout == address(0)`.
 - `refund(bytes32 hash, uint256 amount, Auth m)`: external, `nonReentrant`. Requires a recorded payment, `m.from == payout`, `amount > 0`, `refunded + amount <= paid`. The EIP-3009 nonce is `keccak256(abi.encode("REFUND", hash, refundedBefore))`. Pulls from the payout with `receiveWithAuthorization`, sends to the **original payer only**. Works while paused.
-- Views: `hashInvoice`, `payments(hash)`, `tokenAllowed(token)`, `refundNonce(hash)`.
+- Views: `hashInvoice`, `payments(hash)`, `tokenAllowed(token)`, `refundNonce(hash)`, `paidToken(hash)`.
+- **As built:** the refund route below (`POST /api/invoices/:hash/refund`) was NOT built; refunds are exercised by the contract tests and `npm run e2e:refund`. Added instead: `POST /api/invoices/:hash/cancel`, `GET /api/invoices/:hash/health`, `POST /api/invoices/:hash/collect`, and `mode: "due"` on `authorize`.
 - Owner functions: `pause()`, `unpause()` only.
 
 **Events:** `InvoicePaid(bytes32 indexed hash, address indexed merchant, address indexed payer, address payout, uint256 amount)`, `Refunded(bytes32 indexed hash, address indexed payer, uint256 amount, uint256 totalRefunded)`.
