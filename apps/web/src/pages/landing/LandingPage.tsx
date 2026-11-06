@@ -8,6 +8,7 @@ import { useCountUp, useReveal, useScrollProgress } from '../../lib/motion';
 import { FAQ, Faq } from './Faq';
 import { LiveCheck, PaymentFlow } from './Animated';
 import { DashboardFrame, PhoneMock } from './Mockups';
+import { RealWorld } from './RealWorld';
 import { TamperLab } from './TamperLab';
 import { Mark3D } from './WhitechainMark';
 
@@ -175,6 +176,8 @@ export function LandingPage() {
           </dl>
         </div>
       </section>
+
+      <RealWorld />
 
       <section className="l-live" aria-labelledby="live-h">
         <div className="wrap">
