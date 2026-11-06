@@ -12,6 +12,7 @@ import { errorMessage } from '../../lib/messages';
 import { MAX_SERIES, monthlyDueDates, parseSeriesCount, seriesNote } from '../../lib/series';
 import { signTypedData } from '../../lib/wallet';
 import { Icon } from '../Icon';
+import { BuyerVerdict } from './BuyerVerdict';
 
 interface Line { description: string; quantity: string; price: string }
 
@@ -115,6 +116,7 @@ export function CreateInvoiceForm({ onCreated }: { onCreated: () => void }) {
       <section className="card stack" aria-live="polite">
         <span className="badge badge--ok" style={{ alignSelf: 'flex-start' }}><Icon name="check" />{many ? `${created.length} of ${of} invoices created` : 'Invoice created'}</span>
         <h2>{many ? 'Send these payment links' : 'Send this payment link'}</h2>
+        <BuyerVerdict key={created[0].res.hash} hash={created[0].res.hash} domain={setup.domain} forSeries={many} />
         {many && <p className="small muted">Separate invoices, one per month. Each is paid or scheduled on its own; nothing recurs by itself.</p>}
         {created.map(({ res, due, index }) => (
           <div key={res.hash} className="stack stack--sm">

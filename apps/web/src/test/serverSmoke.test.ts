@@ -13,6 +13,7 @@ import type { Hex } from 'viem';
 import { describe, expect, it } from 'vitest';
 import { ApiError, httpApi } from '../lib/api/client';
 import { invoiceLib } from '../lib/invoiceLib';
+import { merchantHints } from '../lib/merchantHints';
 import { monthlyDueDates, seriesNote } from '../lib/series';
 import { ZERO_ADDRESS, type Address, type Invoice, type InvoiceDetails, type InvoiceDoc } from '../lib/api/types';
 
@@ -126,6 +127,23 @@ describe.skipIf(!run)('web client against apps/server', () => {
     const err = await httpApi.createInvoice(swapped).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe('SIGNATURE_INVALID');
+  });
+
+  it('the merchant preview: PASS has no hints, an unlisted payout FAILS with a fix for that payout', async () => {
+    const good = await makeDoc(30 * DAY, 'Smoke preview pass');
+    await httpApi.createInvoice(good.doc);
+    const pass = await httpApi.verifyHash(good.hash);
+    expect(pass.result).toBe('PASS');
+    expect(merchantHints(pass.checks, DOMAIN)).toEqual([]);
+
+    const bad = await makeDoc(30 * DAY, 'Smoke preview fail', '0x000000000000000000000000000000000000dEaD');
+    await httpApi.createInvoice(bad.doc); // the server stores it (the merchant signed it); the buyer's check is what says FAIL
+    const fail = await httpApi.verifyHash(bad.hash);
+    expect(fail.result).toBe('FAIL');
+    const hints = merchantHints(fail.checks, DOMAIN);
+    expect(hints).toHaveLength(1);
+    expect(hints[0]).toContain('payout wallet is not listed');
+    expect(hints[0]).toContain(DOMAIN);
   });
 
   it('a payout the merchant key signed but never listed in truce.json FAILS the domain check', async () => {
