@@ -48,9 +48,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(
     () =>
+      // Follow the wallet: a new active account or network replaces ours; no account means the site was disconnected there.
       w.onWalletChange(async () => {
-        const chainId = await w.currentChainId();
-        setWallet((s) => ({ ...s, chainId }));
+        const [chainId, account] = await Promise.all([w.currentChainId(), w.currentAccount()]);
+        setWallet((s) => (!s.address ? { ...s, chainId } : account ? { ...s, address: account, chainId, error: undefined } : { connecting: false }));
       }),
     [],
   );

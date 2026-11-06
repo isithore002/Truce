@@ -12,7 +12,7 @@ import { randomHex } from '../invoiceLib';
 export type Purpose = 'merchant' | 'buyer';
 
 export class WalletError extends Error {
-  constructor(public code: 'NO_WALLET' | 'REJECTED' | 'WRONG_CHAIN' | 'UNKNOWN', message: string) {
+  constructor(public code: 'NO_WALLET' | 'REJECTED' | 'WRONG_CHAIN' | 'UNAUTHORIZED' | 'UNKNOWN', message: string) {
     super(message);
     this.name = 'WalletError';
   }
@@ -84,10 +84,14 @@ function wallet(): WalletClient {
   return client;
 }
 
+const UNAUTHORIZED_MSG = 'Your wallet has not authorised this account for Truce. Open your wallet, select the account you connected with (or connect this one), then try again.';
+
 function mapError(e: unknown): WalletError {
-  const err = e as { code?: number; shortMessage?: string; message?: string; name?: string };
+  const err = e as { code?: number; shortMessage?: string; message?: string; name?: string; cause?: { code?: number } };
   if (e instanceof WalletError) return e;
   if (err?.code === 4001 || err?.name === 'UserRejectedRequestError') return new WalletError('REJECTED', 'You declined the request in your wallet. Nothing was signed.');
+  // EIP-1193 4100: the account or method is not authorised (usually: the active account changed after connecting)
+  if (err?.code === 4100 || err?.cause?.code === 4100 || err?.name === 'UnauthorizedProviderError') return new WalletError('UNAUTHORIZED', UNAUTHORIZED_MSG);
   return new WalletError('UNKNOWN', err?.shortMessage ?? err?.message ?? 'The wallet returned an error.');
 }
 
@@ -135,12 +139,26 @@ export async function ensureChain(): Promise<void> {
   if ((await w.getChainId()) !== chain.id) throw new WalletError('WRONG_CHAIN', 'Switch your wallet to Whitechain Sepolia (chain 1874) to continue.');
 }
 
+/** The account the wallet currently exposes to this site (eth_accounts, no prompt), or undefined. */
+export async function currentAccount(): Promise<Address | undefined> {
+  if (isMockWallet()) return undefined;
+  if (!hasInjectedWallet()) return undefined;
+  try {
+    return (await wallet().getAddresses())[0];
+  } catch {
+    return undefined;
+  }
+}
+
 export async function signTypedData(account: Address, typedData: TypedDataDefinition): Promise<Hex> {
   if (isMockWallet()) {
     await new Promise((r) => setTimeout(r, 900));
     return `${randomHex(64)}1b` as Hex;
   }
   try {
+    // Ask only for the account the wallet has authorised; a stale one makes the wallet answer 4100.
+    const authorised = await wallet().getAddresses();
+    if (!authorised.some((a) => a.toLowerCase() === account.toLowerCase())) throw new WalletError('UNAUTHORIZED', UNAUTHORIZED_MSG);
     return await wallet().signTypedData({ account, ...typedData } as Parameters<WalletClient['signTypedData']>[0]);
   } catch (e) {
     throw mapError(e);
