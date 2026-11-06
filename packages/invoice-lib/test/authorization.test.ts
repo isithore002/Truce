@@ -140,3 +140,21 @@ describe("refund authorization", () => {
     expect(await recoverTypedDataAddress({ ...typed, signature: sig })).toBe(acct.address);
   });
 });
+
+describe("verifyReceiveAuthorization", () => {
+  it("accepts the buyer's own signature and rejects any change", async () => {
+    const { signReceiveAuthorization, verifyReceiveAuthorization } = await import("../src/authorization.js");
+    const acct = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
+    const settler = "0x0000000000000000000000000000000000001234" as const;
+    const hash = ("0x" + "33".repeat(32)) as `0x${string}`;
+    const invoice = { amount: 1_000n, dueDate: 100n, expiry: 900n };
+    const tctx = { chainId: 1874, token: "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7" as const };
+    const auth = await signReceiveAuthorization(acct, { settler, invoice, invoiceHash: hash, mode: "due" }, tctx);
+    const params = { settler, invoice, invoiceHash: hash };
+    expect(await verifyReceiveAuthorization(auth, params, tctx)).toBe(true);
+    expect(await verifyReceiveAuthorization({ ...auth, validAfter: auth.validAfter + 1n }, params, tctx)).toBe(false);
+    expect(await verifyReceiveAuthorization(auth, { ...params, invoice: { amount: 1_001n } }, tctx)).toBe(false);
+    expect(await verifyReceiveAuthorization(auth, { ...params, settler: "0x0000000000000000000000000000000000009999" }, tctx)).toBe(false);
+    expect(await verifyReceiveAuthorization({ ...auth, r: "0x00" as `0x${string}` }, params, tctx)).toBe(false);
+  });
+});

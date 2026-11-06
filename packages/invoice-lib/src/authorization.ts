@@ -1,4 +1,4 @@
-import { encodeAbiParameters, keccak256, parseSignature, type Address, type Hex, type LocalAccount } from "viem";
+import { concat, encodeAbiParameters, keccak256, parseSignature, recoverTypedDataAddress, toHex, type Address, type Hex, type LocalAccount } from "viem";
 import type { Invoice } from "./types.js";
 
 /** Track USDT on Whitechain Sepolia (6 decimals, EIP-1967 proxy, EIP-3009). */
@@ -134,4 +134,28 @@ export async function signRefundAuthorization(
   const message = { from: account.address, to: params.settler, value: params.amount, validAfter: params.validAfter ?? 0n, validBefore: params.validBefore, nonce: params.nonce };
   const sig = splitSignature(await account.signTypedData({ domain: tokenDomain(ctx), types: RECEIVE_AUTHORIZATION_TYPES, primaryType: "ReceiveWithAuthorization", message }));
   return { from: account.address, validAfter: message.validAfter, validBefore: message.validBefore, ...sig };
+}
+
+/**
+ * True if `auth` is a valid EIP-3009 signature by `auth.from` for exactly this payment (settler, amount, window, invoice hash).
+ * The token checks the same thing on chain; checking here first keeps junk out of the store. EOA signers only.
+ */
+export async function verifyReceiveAuthorization(
+  auth: BuyerAuth,
+  params: { settler: Address; invoice: Pick<Invoice, "amount">; invoiceHash: Hex },
+  ctx: TokenContext,
+): Promise<boolean> {
+  try {
+    const signature = concat([auth.r, auth.s, toHex(auth.v, { size: 1 })]);
+    const typed = {
+      domain: tokenDomain(ctx),
+      types: RECEIVE_AUTHORIZATION_TYPES,
+      primaryType: "ReceiveWithAuthorization",
+      message: { from: auth.from, to: params.settler, value: params.invoice.amount, validAfter: auth.validAfter, validBefore: auth.validBefore, nonce: params.invoiceHash },
+    } as const;
+    const signer = await recoverTypedDataAddress({ ...typed, signature });
+    return signer.toLowerCase() === auth.from.toLowerCase();
+  } catch {
+    return false;
+  }
 }
