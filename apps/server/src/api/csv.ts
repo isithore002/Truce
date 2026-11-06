@@ -11,12 +11,24 @@ export const CSV_COLUMNS = [
   "due_date",
   "status",
   "paid_at",
+  "refunded",
+  "net_received",
   "payer",
   "payout",
   "tx_link",
   "invoice_hash",
   "example_data",
 ] as const;
+
+/**
+ * Total refunded so far, in token base units, as recorded by this server: the sum of its "refunded" events.
+ * A refund sent some other way (a script straight to the contract) is not in these events; the chain is the source of truth.
+ */
+export function refundedOf(rec: InvoiceRecord): bigint {
+  let total = 0n;
+  for (const e of rec.events) if (e.type === "refunded" && e.detail && /^\d+$/.test(e.detail)) total += BigInt(e.detail);
+  return total;
+}
 
 /**
  * One CSV cell. Quotes when needed, and neutralises spreadsheet formula injection: a cell that starts with
@@ -30,10 +42,14 @@ export function csvCell(value: string | number | boolean | undefined): string {
 
 const isoDate = (unix: bigint | number | string) => new Date(Number(unix) * 1000).toISOString();
 
-/** Accountant export: one row per invoice, amounts in token units, links to the explorer. */
+/**
+ * Accountant export: one row per invoice, amounts in token units, links to the explorer. `refunded` is what this server
+ * recorded, and `net_received` is the paid amount minus it; both are blank until the invoice is paid.
+ */
 export function invoicesToCsv(records: InvoiceRecord[], opts: { now: number; explorerBase: string }): string {
   const rows = records.map((r) => {
     const inv = r.doc.invoice;
+    const refunded = r.payment ? refundedOf(r) : 0n;
     return [
       inv.invoiceId,
       r.doc.details.merchantName,
@@ -43,6 +59,8 @@ export function invoicesToCsv(records: InvoiceRecord[], opts: { now: number; exp
       BigInt(inv.dueDate) === 0n ? "on receipt" : isoDate(inv.dueDate).slice(0, 10),
       effectiveStatus(r, opts.now),
       r.payment ? isoDate(r.payment.paidAt) : "",
+      r.payment ? formatUnits(refunded, 6) : "",
+      r.payment ? formatUnits(BigInt(inv.amount) - refunded, 6) : "",
       r.payment?.payer ?? "",
       inv.payout,
       r.payment?.txHash ? `${opts.explorerBase}/tx/${r.payment.txHash}` : "",

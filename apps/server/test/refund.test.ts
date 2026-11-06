@@ -140,3 +140,37 @@ describe("POST /api/invoices/:hash/refund", () => {
     expect([a, b].find((r) => r.statusCode === 409)!.json().error.code).toBe("DUPLICATE");
   });
 });
+
+describe("the accountant CSV after refunds", () => {
+  /** Reads the one row for this invoice as { column: value } using the header line. */
+  async function csvRow(env: Env, hash: string) {
+    const body = (await env.app.inject({ method: "GET", url: `/api/merchants/${(await makeDocMerchant())}/export.csv` })).body;
+    const [head, ...rows] = body.replace(/^﻿/, "").trimEnd().split("\r\n");
+    const cols = head.split(",");
+    const row = rows.find((r) => r.includes(hash))!;
+    const cells = row.split(",");
+    return Object.fromEntries(cols.map((c, i) => [c, cells[i]])) as Record<string, string>;
+  }
+  const makeDocMerchant = async () => (await makeDoc()).invoice.merchant;
+
+  it("shows no refund for an unpaid invoice, then none, then part, then all of it", async () => {
+    const env = setup();
+    const doc = await makeDoc();
+    const hash = invoiceHash(doc.invoice, ctx);
+    await env.app.inject({ method: "POST", url: "/api/invoices", payload: toWire(doc) });
+    let row = await csvRow(env, hash);
+    expect(row).toMatchObject({ status: "ISSUED", refunded: "", net_received: "" }); // nothing paid yet
+
+    await env.app.inject({ method: "POST", url: `/api/invoices/${hash}/authorize`, payload: await authBody(doc) });
+    row = await csvRow(env, hash);
+    expect(row).toMatchObject({ status: "PAID", amount: "1250", refunded: "0", net_received: "1250" });
+
+    expect((await post(env, hash, await signRefund(hash, 300_000_000n, 0n))).statusCode).toBe(200);
+    row = await csvRow(env, hash);
+    expect(row).toMatchObject({ status: "PAID", refunded: "300", net_received: "950" }); // still PAID, but net of the refund
+
+    expect((await post(env, hash, await signRefund(hash, AMOUNT - 300_000_000n, 300_000_000n))).statusCode).toBe(200);
+    row = await csvRow(env, hash);
+    expect(row).toMatchObject({ refunded: "1250", net_received: "0" });
+  });
+});
