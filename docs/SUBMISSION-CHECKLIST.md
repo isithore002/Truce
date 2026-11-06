@@ -33,8 +33,8 @@ Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...
 | 6 | Pay now | One signature prompt (no gas), progress, then paid with an explorer link |
 | 7 | `/demo` -> build the swapped-payout link and open it | Big FAIL, the failing checks highlighted, Pay disabled |
 | 8 | `/merchant` dashboard | The row shows Paid with a transaction link; "Download CSV" downloads a file that opens in a spreadsheet |
-| 9 | New invoice with **today's date** as the due date (UTC), open as buyer, choose "On the due date", sign | "Scheduled" appears, then the scheduler collects it within seconds. There is no "due in N minutes" field in this UI (see below) |
-| 10 | New invoice with a **future** due date (tomorrow), schedule it, press "Cancel scheduled payment" | Cancelled |
+| 9 | `/merchant`: keep "Mark as EXAMPLE DATA" on, type **2** in "Demo: due in N minutes", sign. Open the link as buyer, choose "On the due date", sign | "Scheduled" with a due time like "6 Nov 2026, 09:12 UTC", then the scheduler collects it about 2 minutes after you created it. Use 2 to 3 minutes: the buyer must sign before the due time, and two wallet prompts take a while. Not tried with a due time that has already passed |
+| 10 | New invoice with a **future** due date (leave the minutes field empty, pick tomorrow), schedule it, press "Cancel scheduled payment" | Cancelled |
 
 The Soul badge ("Individual KYC-verified on WhiteBIT (demo data, mocked)") should appear on example invoices only.
 
