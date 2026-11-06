@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildApp } from "./api/app.js";
 import { createChain } from "./chain/index.js";
-import { createDomainChecker, createDomainResolver } from "./domain/resolver.js";
+import { createDomainChecker, createDomainResolver, registerDemoDomain } from "./domain/resolver.js";
 import { Scheduler } from "./scheduler.js";
 import { JsonStore } from "./shared/store.js";
 
@@ -17,6 +17,8 @@ const host = env.HOST || "127.0.0.1"; // local by default; set HOST deliberately
 const demo = env.DEMO_DOMAINS === "1";
 const storePath = env.STORE_PATH || join(fileURLToPath(new URL("../data/", import.meta.url)), "store.json");
 
+const registry = env.DEMO_REGISTRY_DIR || join(fileURLToPath(new URL("../data/", import.meta.url)), "demo-domains"); // git-ignored with the rest of data/
+const domainOpts = { demoDomains: demo, registry };
 const chain = createChain(env);
 const store = new JsonStore(storePath);
 const inFlight = new Set<string>(); // shared, so an invoice is never settled by the API and the scheduler at once
@@ -26,8 +28,9 @@ const app = buildApp({
   store,
   inFlight,
   collectNow: (hash) => scheduler.collectNow(hash),
-  resolveDomain: createDomainResolver({ demoDomains: demo }),
-  checkDomain: createDomainChecker({ demoDomains: demo }),
+  resolveDomain: createDomainResolver(domainOpts),
+  checkDomain: createDomainChecker(domainOpts),
+  registerDemoDomain: demo ? (input, dryRun) => registerDemoDomain(domainOpts, input, dryRun) : undefined,
   publicBaseUrl: env.PUBLIC_BASE_URL || "http://localhost:5173",
   webOrigin: env.WEB_ORIGIN || "http://localhost:5173",
   exampleMode: demo,

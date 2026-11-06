@@ -10,7 +10,7 @@ import { invoicesToCsv } from "./csv.js";
 import { ledgerEntries, ledgerToCsv } from "./ledger.js";
 import { normalizeDomain } from "../domain/ssrfGuard.js";
 import { evaluateDomainFile } from "./domainCheck.js";
-import { AddressParam, AuthorizeBody, CancelBody, DomainCheckQuery, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
+import { AddressParam, AuthorizeBody, CancelBody, DemoDomainBody, DomainCheckQuery, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
 import { effectiveStatus, summarize } from "./status.js";
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -124,7 +124,26 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     const q = DomainCheckQuery.parse(req.query);
     const domain = normalizeDomain(q.domain);
     if (!domain) throw new ApiError("INVALID_DOCUMENT", "That is not a valid public domain name, for example acme.com.");
-    return evaluateDomainFile(await ctx.checkDomain(domain), { domain, signer: q.signer, payout: q.payout, chainId: chain.config.chainId });
+    const result = evaluateDomainFile(await ctx.checkDomain(domain), { domain, signer: q.signer, payout: q.payout, chainId: chain.config.chainId });
+    if (result.demo && result.status !== "OK" && ctx.registerDemoDomain) {
+      const can = await ctx.registerDemoDomain({ domain, name: "", signer: q.signer, payout: q.payout }, true);
+      result.canRegister = can.ok;
+      if (!can.ok) result.registerBlocked = can.reason;
+    }
+    return result;
+  });
+
+  // Demo mode only. A fictional .example name has no website, so the setup page publishes its file on this server.
+  const demoDomainLimiter = new RateLimiter(10, 60_000);
+  app.post("/api/demo-domains", async (req, reply) => {
+    if (!ctx.registerDemoDomain) throw new ApiError("NOT_FOUND", "Demo domains are not enabled on this server.");
+    demoDomainLimiter.check(req.ip);
+    const body = DemoDomainBody.parse(req.body);
+    const domain = normalizeDomain(body.domain);
+    if (!domain) throw new ApiError("INVALID_DOCUMENT", "That is not a valid domain name.");
+    const r = await ctx.registerDemoDomain({ domain, name: body.name, signer: body.signer, payout: body.payout });
+    if (!r.ok) throw new ApiError("INVALID_DOCUMENT", `Cannot register ${domain}: ${r.reason}.`);
+    return reply.status(r.created ? 201 : 200).send({ domain, created: r.created });
   });
 
   app.get("/api/merchants/:address/invoices", async (req) => {

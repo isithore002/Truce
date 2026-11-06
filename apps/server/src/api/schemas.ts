@@ -61,6 +61,14 @@ export const DomainCheckQuery = z.object({
   payout: address("payout"),
 });
 
+/** Demo mode only: publish a fictional *.example merchant's file on this server. */
+export const DemoDomainBody = z.object({
+  domain: z.string().min(1).max(253),
+  name: z.string().trim().max(120).default(""),
+  signer: address("signer"),
+  payout: address("payout"),
+});
+
 /** The payout wallet's signed refund authorization. The amount is in token base units (USDT has 6 decimals). */
 export const RefundBody = z.object({
   amount: uintString,

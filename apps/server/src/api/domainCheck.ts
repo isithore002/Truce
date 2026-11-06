@@ -12,6 +12,10 @@ export interface DomainCheck {
   /** True when the file came from this server's fictional example list, not from the internet. */
   demo: boolean;
   listed?: { signingAddress: Address; payoutAddresses: Address[] };
+  /** Demo domains only: true when the setup page may publish this fictional name for the connected wallet. */
+  canRegister?: boolean;
+  /** Demo domains only: why it may not (a built-in example, or a name another wallet registered). */
+  registerBlocked?: string;
 }
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -27,6 +31,9 @@ export function evaluateDomainFile(fetched: FetchResult, input: { domain: string
   const demo = domain.endsWith(".example");
   const where = demo ? `the example list on this server for ${domain}` : `https://${domain}/.well-known/truce.json`;
 
+  if (!fetched.ok && demo) {
+    return { status: "UNREACHABLE", domain, demo, message: `No example file is registered for ${domain} on this server (${fetched.reason}). Buyers would see FAIL.` };
+  }
   if (!fetched.ok) {
     return {
       status: "UNREACHABLE",

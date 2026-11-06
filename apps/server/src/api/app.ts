@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { DomainResolver } from "@truce/invoice-lib";
-import type { Hex } from "viem";
+import type { Address, Hex } from "viem";
+import type { RegisterResult } from "../domain/resolver.js";
 import type { ChainModule } from "../chain/types.js";
 import type { FetchResult } from "../domain/fetchDomainFile.js";
 import type { Store } from "../shared/store.js";
@@ -14,6 +15,8 @@ export interface AppDeps {
   resolveDomain: DomainResolver;
   /** Fresh, uncached read of a domain file with the failure reason, for the setup page's check. Defaults to resolveDomain. */
   checkDomain?: (domain: string) => Promise<FetchResult>;
+  /** Demo mode only: publishes a fictional *.example merchant's file on this server. Unset means registration is off. */
+  registerDemoDomain?: (input: { domain: string; name: string; signer: Address; payout: Address }, dryRun?: boolean) => Promise<RegisterResult>;
   /** Unix seconds. Injectable so tests can move time. */
   now?: () => number;
   /** Where payment links point (the web app). */
@@ -32,6 +35,7 @@ export interface AppDeps {
 }
 
 export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "checkDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs" | "inFlight">> {
+  registerDemoDomain?: AppDeps["registerDemoDomain"];
   collectNow?: (hash: Hex) => Promise<string>;
 }
 
@@ -53,6 +57,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     authorizeWaitMs: deps.authorizeWaitMs ?? 15_000,
     inFlight: deps.inFlight ?? new Set<string>(),
     collectNow: deps.collectNow,
+    registerDemoDomain: deps.registerDemoDomain,
   };
   const origin = deps.webOrigin ?? "http://localhost:5173";
 
