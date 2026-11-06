@@ -77,6 +77,10 @@ docs/                 spec, design, decisions log, audit
 
 The invoice hash is the EIP-712 digest of the invoice, the EIP-3009 nonce and the settlement key at once, so one signature from the buyer is bound to exactly one invoice. The TypeScript and Solidity hashes are checked against shared golden vectors.
 
+## Read it like an accounts-receivable module
+
+The parts line up with the usual ERP-style layers: master data (merchant setup, `truce.json`, the token allowlist), documents (the signed invoice, the buyer's payment authorization, the refund), processes (verification, settlement, collections, cancellation, refund), records (the event history and the on-chain payment record) and reports (dashboard, CSV, public verify page). The on-chain record plays the part of the bank statement in a three-way match with the signed invoice and the buyer's authorization. This is a way to read the structure, **not an ERP and not an ERP integration**: there are no users, roles or approvals. The mapping, with file locations, is in [docs/design/G-ERP-STYLE-VIEW.md](docs/design/G-ERP-STYLE-VIEW.md).
+
 ## Why on chain
 
 The domain file and the PASS/FAIL check are for the buyer's eyes. They do not help if the buyer is rushed, the page is spoofed, or the server is wrong. The contract enforces the payee from the merchant's signature at the moment money moves, whoever submits the transaction. It also settles each invoice once, and anyone can read `payments(hash)` to confirm a payment without trusting our server. A payment page alone cannot show that.
