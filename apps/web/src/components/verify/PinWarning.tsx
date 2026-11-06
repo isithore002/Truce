@@ -11,6 +11,7 @@ export function PinWarning({ pin, domain, confirmed, onConfirm }: { pin: PinChec
         <Icon name="key" />
         <div>
           <p><strong>First payment to {domain} from this browser.</strong></p>
+          <p>This browser has not seen {domain} before, so a lookalike domain would look the same. For a large amount, confirm the payout wallet with the merchant another way, such as a phone call.</p>
           <p>After you pay, this browser remembers its wallets and warns you if they change.</p>
         </div>
       </div>

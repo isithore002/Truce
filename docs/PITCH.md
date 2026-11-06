@@ -27,7 +27,7 @@ Truce lets the buyer verify the payee against the merchant's own domain before p
 | What drains the relayer? | Simulate before sending, rate limits, a daily WBT budget. | Budget is small on testnet |
 | Lookalike or hacked domain? | Pinning warns when a domain's signing wallet or payout changes after first use. | Does not stop a domain compromised before first use |
 | Is the invoice real? | We prove who signed and where it pays, not that goods were sold. | Sockpuppet fraud undetectable |
-| Privacy? | Invoice details stay off chain (hash only). Merchant, payer, payout and amount are public. Stealth recipients are roadmap. | Public amounts and addresses |
+| Is it private? | No. Truce is about integrity (paying the right wallet), not confidentiality. Only a hash of the invoice details is on chain, but the details are stored unencrypted on our server, and merchant, payer, payout and amount are public. A leaked link exposes details, not funds: the payout is fixed by the merchant's signature. Encryption would not stop a swapped payout. Same split as DKIM or Verification of Payee: prove who, without hiding what (general knowledge, not researched here). Stealth recipients are a later phase. | Details readable by anyone with the link or the server (useful for a convincing phishing email); public amounts and addresses |
 | ERP integrated? | No. ERP-shaped fields and a CSV export only. | |
 | Tax and accounting? | Not solved; CSV only. | |
 | The Soul badge? | Mocked, labelled "Individual KYC-verified on WhiteBIT (demo data, mocked)". Personal KYC, not a business check. | Mainnet only, one owner key |

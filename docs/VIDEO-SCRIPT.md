@@ -33,7 +33,7 @@ Point at `rejected on chain ... BadMerchantSignature. Nothing was sent.`
 "Even if someone skips the app, the contract refuses. It only pays the wallet the merchant signed. This was checked before sending, so nothing was spent."
 
 **1:40 to 2:20. Buyer, relayer and the live dashboard** (honest link `/pay/...`, the merchant dashboard visible in the other window)
-PASS, ten checks, full payout wallet. Connect the buyer wallet, press Pay, sign once. The dashboard row flashes and turns Paid on its own. On the receipt point at the "Network fee" row, then open the explorer link: the `settle` call, the USDT transfer to the payout wallet, and that the sender is the relayer `0x37De...95Ff`.
+PASS, ten checks, full payout wallet. Point at the blue "First payment to this domain from this browser" notice: it says a lookalike domain would look the same and to confirm the wallet another way for a large amount. Connect the buyer wallet, press Pay, sign once. The dashboard row flashes and turns Paid on its own. On the receipt point at the "Network fee" row, then open the explorer link: the `settle` call, the USDT transfer to the payout wallet, and that the sender is the relayer `0x37De...95Ff`.
 "One signature, no gas for the buyer. A relayer pays the fee in WBT, and the receipt shows exactly what it paid. The merchant's dashboard updated by itself. The test USDT goes straight to the wallet the merchant signed."
 
 **2:20 to 2:40. Verifier and accountant** (`/verify?hash=...`, the dashboard, Download CSV)
@@ -48,7 +48,7 @@ Show Scheduled; you may cut to the finished Paid row or the explorer once it lan
 "The buyer can sign now and be collected on the due date. For this video the due date is time-compressed to two minutes. The signature is a commitment, not locked funds: if the balance is short on the day, the collection fails and the invoice shows Failed."
 
 **3:30 to 3:45. Limits and close** (README "Limitations" on screen)
-"Testnet only, example data, an unaudited contract. A lookalike domain is not detected. Code, tests and our Whitechain feedback are in the repo."
+"Testnet only, example data, an unaudited contract. Invoices are not private: amounts and addresses are public and the details are stored unencrypted. Truce checks who you pay; it does not hide it. A lookalike domain is not detected on a first payment. Code, tests and our Whitechain feedback are in the repo."
 
 The monthly series option ("Number of invoices") is not in the video: it only creates separate invoices faster, and saying "renewals" about it would over-claim. If you mention it, say "a series of separate invoices".
 
@@ -57,6 +57,10 @@ The monthly series option ("Number of invoices") is not in the video: it only cr
 - Wallet prompt does not appear: reload, confirm chain 1874, retry. Cut the dead time in editing; never speed up.
 - Payment or refund fails: do not narrate around it. Stop, check `http://127.0.0.1:8787/healthz` (relayer WBT) and the buyer's and payout wallet's USDT, retake.
 - Over 4 minutes: cut the due-date scene first, then the CSV, then the storefront code view. Never cut the FAIL, the revert, or the real payment.
+
+## If a judge asks "is it private?"
+
+"No. Truce is about integrity, not confidentiality. The attack we defend against is a changed bank-details email: nobody needs to read the invoice for that, they only change where the money goes. A signature and the contract stop that. Details are stored unencrypted and amounts and addresses are public. Encryption would not stop a swapped payout. Confidentiality is not built." (The longer version is in `docs/PITCH.md`.)
 
 ## Words to avoid
 
