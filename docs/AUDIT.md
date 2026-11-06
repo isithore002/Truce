@@ -21,7 +21,8 @@ Scope: everything since tag `c1`, checked against `docs/SPEC.md`. Evidence is wh
 | Capped refunds (contract + tests, no UI) | SHOULD | PASS | refund unit and fuzz tests plus a stateful invariant; live refund and cap rejection |
 | Health check, buyer cancel | SHOULD (added by the run) | PASS | viem tests, route tests; live cancel tx |
 | Mocked Soul badge | STRETCH | PASS | exact wording tested; example mode only |
-| Hosting (T30), refund UI, real Soul reads, stealth, webhooks | OUT | not built, as planned | README "Not built" |
+| Hosting (T30), real Soul reads, stealth, webhooks | OUT | not built, as planned | README "Not built" |
+| Refund panel and API route, live dashboard, network-fee line, storefront demo app, monthly series | Added later by the developer | built; see section 10 | DECISIONS-LOG "Additions authorised" |
 
 Nothing outside the authorised list was added. Additions beyond the original task list, all inside the authorised scope: `POST /api/invoices/:hash/collect` (a "Collect now" control for demos), `GET /api/invoices/:hash/health`, `POST /api/invoices/:hash/cancel`, a per-IP limit on invoice creation, and `scripts/e2e-due.ts` / `e2e-refund.ts`.
 
@@ -119,3 +120,19 @@ Remaining human steps and times: about 15 minutes for the click-through, about 4
 - **Design fact worth knowing:** invoice creation and `authorize` check the merchant's signature, not the domain file. A payout the merchant key signed but never listed in `truce.json` shows FAIL and disables Pay in the app, but the API itself would still accept it. The contract pays only the signed payout, so this is the merchant's own choice, not a redirect by a third party.
 - **Demo gap (closed):** the new create form took a calendar due date only, so a time-compressed scheduled-then-collected moment could not be shown. An optional "Demo: due in N minutes" field (1 to 1440, only while the invoice is marked EXAMPLE DATA, needs at least 1 day payable) now sets the due time N minutes after signing. Due times that are not midnight UTC show the time (UTC) on the pay panel, receipt, dashboard and invoice card. Unit tests cover the parser and formatter; `npm run smoke:web` includes an invoice due 6 seconds out that is scheduled through the web client and collected by the scheduler (6/6 pass on the mock chain). The form itself has not been seen in a browser.
 - Still unclicked in a real browser: everything in section 7, now on the new screens.
+
+## 10. Additions made after the audit above (2026-11-06, later)
+
+Authorised by the developer in a written exception (docs/DECISIONS-LOG.md, "Additions authorised"). Nothing was removed to pay for them.
+
+| Addition | Evidence | Not verified |
+|---|---|---|
+| Dashboard refresh every 4 s with a changed-row flash | 6 unit tests for the change detection | Not seen in a browser |
+| Receipt "Network fee" row (explorer data for that transaction) | 7 unit tests using a real settlement's values; the explorer API allows browser reads (CORS `*`) | Not seen in a browser; shows nothing in mock mode |
+| Storefront demo app, 9 integration lines | 8 server tests; run against the live API, and the created invoice verified PASS with 10 checks | The page was not opened in a browser |
+| Refund route and panel | 9 route tests, 7 real-chain-module tests, mock-chain rules, web helper and signing tests, a web-client smoke test. **Live:** `npm run e2e:api` settled 0.01 USDT, then refunded 0.002 USDT to the buyer through the new route. Both transactions read `ok` on Blockscout (settle 0x9b378a38...e281, refund 0x816e2a2b...4605: payout wallet to contract to buyer, 0.002 USDT each way), and an over-cap refund was refused | The panel was never clicked with a wallet; the dashboard list has no refunded badge |
+| Monthly series of separate invoices | 9 unit tests for dates (month ends, leap year, year end), notes and the count; a smoke test creates a 3-invoice series through the server and each verifies PASS | Not clicked. A rejected second signature keeps the first invoice by design, but only the helpers are tested, not the form |
+
+Counts after these changes: server 159, web 83 (plus 8 opt-in smoke tests, 8 of 8 passing on the mock chain), demo storefront 8, invoice-lib 74, SDK 4. Foundry 49 was not rerun (no contract change).
+
+Still the biggest risk: no wallet screen, old or new, has been clicked in a real browser. The public Whitechain RPC was also slow at times during this work (one health check took 9 seconds), which can stall a live demo.

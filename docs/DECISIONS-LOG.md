@@ -44,6 +44,15 @@ The two-developer split (chain side / product side) was dropped; one person now 
 The developer asked for an autonomous run covering MUST + SHOULD + STRETCH (`docs/prompts/AUTONOMOUS-RUN.md`): merchant page, SDK and demo app, key pinning, refund (contract + tests, redeploy), due-date mode, health check and cancel, mocked Soul badge, docs, audit.
 This is the written exception to the scope-change rule. Refund UI stays out (contract + tests only). Hosting (T30) stays out. Progress is logged in `docs/AUTONOMOUS-LOG.md`.
 
+## Additions authorised (2026-11-06, later)
+The developer asked for five additions to raise the demo's impact for the Whitechain Operate track, each tied to its stated asks (a drop-in piece a separate demo app adds, refunds, renewals, merchant and customer views):
+1. Merchant dashboard refreshes every 4 s and flashes rows whose status changed.
+2. The receipt shows the network fee and who paid it, read from the explorer for that transaction.
+3. A visible storefront demo app (`examples/merchant-demo/shop.ts`) whose Truce integration is 9 lines.
+4. A refund panel in the invoice drawer, backed by `POST /api/invoices/:hash/refund` (the payout wallet signs, the relayer sends, the contract pays only the original payer, capped).
+5. An optional monthly series: N separate invoices, each signed and paid on its own. Worded as a series of invoices, not a subscription or a recurring charge.
+This reverses the earlier decision to keep the refund UI out. **No existing feature was removed to pay for these** (the change rule normally requires that): this is a written exception made by the developer. If time runs short the cut order is the series, the storefront and the fee line first, then the Soul badge.
+
 ## Build choices
 - 2026-11-06, web: the `b/web-frontend` app (mock adapter, /setup, /demo, key pinning, pay gate tests) replaces the first `apps/web` on `main`; it was replayed on top of `main` in small commits, keeps `main`'s Vite 8 / React 19 / TS 7, signs only through `@truce/invoice-lib`, and maps the real `apps/server` responses in `src/lib/api/client.ts`.
 - 2026-11-06, web: visual style changed to the "teal treasury" look the user picked from a reference template (palette and font only; no code or brand copied). Details in `apps/web/TEMPLATE-MAP.md`.

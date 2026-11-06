@@ -12,11 +12,11 @@
 > | Tier | Items |
 > |---|---|
 > | MUST | `InvoiceSettler` + tests + verified deploy; invoice sign/verify library; relayer; SDK (~20 lines); merchant dashboard (create, status, CSV); buyer page with PASS/FAIL; **public verify page; key pinning (payee-change warning)**; one real USDT payment with explorer link; README; `WHITECHAIN_FEEDBACK.md`; 2-4 min demo incl. the swapped-payee attack |
-> | SHOULD | **pay-on-due-date with a pre-due balance check and a clear Failed state** (booth: fits B2B invoices with terms; the weak spot is unlocked funds); capped refunds in contract + tests only (no refund UI, swapped out to pay for the line above) |
-> | STRETCH | mocked Soul badge ("Individual KYC-verified on WhiteBIT (demo data, mocked)") via `SoulStatus` adapter |
+> | SHOULD | **pay-on-due-date with a pre-due balance check and a clear Failed state** (booth: fits B2B invoices with terms; the weak spot is unlocked funds); capped refunds (contract, tests, API route and a refund panel; the UI was added back on 2026-11-06 by the developer, see DECISIONS-LOG) |
+> | STRETCH | mocked Soul badge ("Individual KYC-verified on WhiteBIT (demo data, mocked)") via `SoulStatus` adapter. Added 2026-11-06 at the developer's request: live-refreshing dashboard, network-fee line on the receipt, a storefront demo app, a refund panel, and an optional monthly series of separate invoices (not a subscription) |
 > | OUT | stealth addresses, real Soul reads, mainnet transactions, DNSSEC, approvals, auditor package |
 >
-> **Cut order if late:** Soul badge, key pinning, refund UI (keep contract refund), CSV styling, scheduled collection. **Never cut:** on-chain payout enforcement, PASS/FAIL badge, one real USDT payment.
+> **Cut order if late:** the 2026-11-06 additions (series, storefront, network-fee line), Soul badge, key pinning, refund panel (keep contract refund and route), CSV styling, scheduled collection. **Never cut:** on-chain payout enforcement, PASS/FAIL badge, one real USDT payment.
 > **Open items to confirm (do not block):** signed `cancelAuthorization` on the track USDT; faucet drip (docs 0.5 WBT vs flyer 2 WBT); registry owner key (README open question).
 > **Repo layout:** `contracts/` (Foundry), `packages/invoice-lib/`, `apps/relayer/`, `apps/web/` (merchant, buyer, verify pages), `sdk/`, `docs/`.
 > **Definition of done:** a stranger can open the README, run one command set, create an invoice, pay it with testnet USDT, see PASS and the settled status, and click through to the explorer.

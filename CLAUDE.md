@@ -12,7 +12,7 @@ pays only the signed payout wallet, settles each invoice once, and supports capp
 ## Frozen scope (change rule: nothing is added unless something of equal size is removed)
 - MUST: `InvoiceSettler` + Foundry tests + verified deploy; invoice sign/verify library; relayer; SDK (~20 lines for a merchant app); merchant dashboard (create, status, CSV); buyer page with PASS/FAIL;
   public verify page; key pinning (payee-change warning); one real USDT payment with explorer link; README; `WHITECHAIN_FEEDBACK.md`; 2-4 min demo incl. the swapped-payout attack.
-- SHOULD: pay-on-due-date with a pre-due balance check and a clear Failed state; capped refunds (contract + tests only, no refund UI).
+- SHOULD: pay-on-due-date with a pre-due balance check and a clear Failed state; capped refunds (contract, tests, API route and refund panel in the invoice drawer).
 - STRETCH: mocked Soul badge, only if more than 2 hours are spare after checkpoint C4. OUT: stealth addresses, real Soul reads, mainnet transactions, DNSSEC, approvals, auditor package, webhooks (solo build).
 - Cut order if late: Soul badge, key pinning, CSV styling, due-date collection. Never cut: on-chain payout enforcement, PASS/FAIL badge, one real USDT payment.
 

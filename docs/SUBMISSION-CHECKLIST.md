@@ -19,6 +19,8 @@ CHAIN_MODE=testnet DEMO_DOMAINS=1 npm run server
 ```
 Terminal 2: `npm run dev -w apps/web`, then open **http://localhost:5173** (type `localhost`, not `127.0.0.1`: the server's CORS allows exactly that origin) in a browser with MetaMask or Rabby. Restart Vite after editing `.env.local`.
 
+Needs for the new steps: step 11 uses the payout wallet's USDT (it holds a small amount from earlier test payments; a refund only moves back what was paid), and step 12 starts a small server that holds `MERCHANT_PK`, so it listens on 127.0.0.1 only.
+
 Optional pre-check that needs no browser (mock chain, port 8790): `DEMO_DOMAINS=1 PORT=8790 npm run server`, then `npm run smoke:web`. It runs the web app's own client against the server: create, get, verify, pay now, list, CSV, swapped-payout FAIL, pay on the due date, cancel.
 
 Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...51Dc` (import the MERCHANT_PK key into the wallet), the buyer pays with `0xB17a...a28E` (import PAYER_PK). Use a separate browser profile for each, or switch accounts.
@@ -30,11 +32,14 @@ Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...
 | 3 | `/merchant` -> fill client name, one line item, a due date -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears |
 | 4 | Open the link in the buyer profile (`/pay/...`) | Big PASS, ten checks, full payout wallet shown |
 | 5 | Connect the buyer wallet | Chain 1874 is added or switched to |
-| 6 | Pay now | One signature prompt (no gas), progress, then paid with an explorer link |
+| 6 | Pay now (keep `/merchant` open in a second window) | One signature prompt (no gas), progress, then paid with an explorer link and a "Network fee" row saying the relayer paid. In the second window the row flashes green and flips to Paid within about 4 seconds, without a reload |
 | 7 | `/demo` -> build the swapped-payout link and open it | Big FAIL, the failing checks highlighted, Pay disabled |
 | 8 | `/merchant` dashboard | The row shows Paid with a transaction link; "Download CSV" downloads a file that opens in a spreadsheet |
 | 9 | `/merchant`: keep "Mark as EXAMPLE DATA" on, type **2** in "Demo: due in N minutes", sign. Open the link as buyer, choose "On the due date", sign | "Scheduled" with a due time like "6 Nov 2026, 09:12 UTC", then the scheduler collects it about 2 minutes after you created it. Use 2 to 3 minutes: the buyer must sign before the due time, and two wallet prompts take a while. Not tried with a due time that has already passed |
 | 10 | New invoice with a **future** due date (leave the minutes field empty, pick tomorrow), schedule it, press "Cancel scheduled payment" | Cancelled |
+| 11 | `/merchant` -> open the paid invoice -> Refund. Connect the payout wallet (the merchant account), amount `0.005`, "Sign and send refund" | One signature prompt (no gas). "Refunded so far" and "Left to refund" update, a "Partly refunded" badge appears, History lists the refund with an explorer link, and the buyer wallet receives the USDT. Try an amount above what is left: a plain refusal, nothing sent |
+| 12 | Third terminal: `npm run shop -w @truce/merchant-demo`, open http://127.0.0.1:8800, press "Invoice me" on a service | A pay link appears within a few seconds (needs `MERCHANT_PK` in `.env`). Opening it shows PASS and the service name. The banner says EXAMPLE DATA |
+| 13 | `/merchant` create form: set "Number of invoices" to `3` (leave the demo minutes empty), sign three times | Three links, due one month apart, notes ending "Invoice 1 of 3" and so on. If you reject the second signature, the first link is kept and the page says "Created 1 of 3" |
 
 The Soul badge ("Individual KYC-verified on WhiteBIT (demo data, mocked)") should appear on example invoices only.
 
