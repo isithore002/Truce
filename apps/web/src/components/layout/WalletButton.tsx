@@ -12,7 +12,7 @@ import { Icon } from '../Icon';
  * this page (signing as merchant or paying as buyer), shortcuts and Disconnect. "Switch network" when on another chain.
  */
 export function WalletButton() {
-  const { wallet, connect, disconnect, onRightChain, switchChain, toast, publicConfig } = useApp();
+  const { wallet, connect, reconnect, disconnect, onRightChain, switchChain, toast, publicConfig, walletInfo } = useApp();
   const { pathname } = useLocation();
   const purpose = pathname.startsWith('/merchant') || pathname.startsWith('/setup') ? 'merchant' : 'buyer';
   const [open, setOpen] = useState(false);
@@ -21,8 +21,8 @@ export function WalletButton() {
 
   // Mock wallet: merchant pages act as Northlight, buyer pages as Beta Labs.
   useEffect(() => {
-    if (isMockWallet() && wallet.address && !sameAddress(wallet.address, MOCK_ACCOUNTS[purpose])) void connect(purpose);
-  }, [purpose, wallet.address, connect]);
+    if (isMockWallet() && wallet.address && !sameAddress(wallet.address, MOCK_ACCOUNTS[purpose])) void reconnect(purpose);
+  }, [purpose, wallet.address, reconnect]);
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
@@ -35,10 +35,8 @@ export function WalletButton() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [open]);
 
-  async function onConnect() {
-    const a = await connect(purpose);
-    if (a) toast(purpose === 'merchant' ? 'Wallet connected. Your invoices are below.' : 'Wallet connected.');
-  }
+  // The connect modal shows its own "Connected" step, so no toast here.
+  const onConnect = () => connect(purpose);
 
   if (!wallet.address) {
     return (
@@ -76,7 +74,8 @@ export function WalletButton() {
           </div>
           <div className="wallet-menu__net">
             <span className="wallet-menu__dot" aria-hidden="true" />
-            {config.apiMode === 'mock' ? 'Mock wallet · Whitechain Sepolia (1874)' : 'Whitechain Sepolia (1874)'}
+            {walletInfo?.icon && <img src={walletInfo.icon} alt="" width={16} height={16} className="wallet-menu__wicon" />}
+            {walletInfo ? `${walletInfo.name} · ` : ''}{config.apiMode === 'mock' ? 'Mock wallet · Whitechain Sepolia (1874)' : 'Whitechain Sepolia (1874)'}
           </div>
           <div className="wallet-menu__row">
             <button type="button" role="menuitem" className="wallet-menu__chip" onClick={() => void navigator.clipboard?.writeText(address).then(() => toast('Address copied'))}><Icon name="copy" size={14} />Copy address</button>

@@ -19,12 +19,68 @@ export class WalletError extends Error {
 }
 
 export const isMockWallet = () => config.apiMode === 'mock';
-export const hasInjectedWallet = () => typeof window !== 'undefined' && !!window.ethereum;
+
+/* ---------- which browser wallet: EIP-6963 discovery, falling back to window.ethereum ---------- */
+
+type Eip1193 = NonNullable<Window['ethereum']>;
+type Listener = (e: string, f: () => void) => void;
+
+/** A wallet that announced itself (EIP-6963). Name and icon come from the wallet itself. */
+export interface DiscoveredWallet {
+  uuid: string;
+  name: string;
+  /** data: URI supplied by the wallet */
+  icon: string;
+  rdns: string;
+  provider: Eip1193;
+}
+
+let selected: Eip1193 | undefined;
+const currentProvider = (): Eip1193 | undefined => selected ?? (typeof window !== 'undefined' ? window.ethereum : undefined);
+export const hasInjectedWallet = () => !!currentProvider();
+
+/** Listens for wallets announcing themselves and asks them to announce now. Returns an unsubscribe function. */
+export function discoverWallets(onChange: (wallets: DiscoveredWallet[]) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const found = new Map<string, DiscoveredWallet>();
+  const onAnnounce = (e: Event) => {
+    const d = (e as CustomEvent<{ info: Omit<DiscoveredWallet, 'provider'>; provider: Eip1193 }>).detail;
+    if (!d?.info?.uuid || !d.provider) return;
+    found.set(d.info.uuid, { ...d.info, provider: d.provider });
+    onChange([...found.values()]);
+  };
+  window.addEventListener('eip6963:announceProvider', onAnnounce);
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+  return () => window.removeEventListener('eip6963:announceProvider', onAnnounce);
+}
 
 let client: WalletClient | undefined;
+const changeListeners = new Set<() => void>();
+const fire = () => changeListeners.forEach((f) => f());
+function attach(p?: Eip1193) {
+  const eth = p as unknown as { on?: Listener } | undefined;
+  eth?.on?.('accountsChanged', fire);
+  eth?.on?.('chainChanged', fire);
+}
+function detach(p?: Eip1193) {
+  const eth = p as unknown as { removeListener?: Listener } | undefined;
+  eth?.removeListener?.('accountsChanged', fire);
+  eth?.removeListener?.('chainChanged', fire);
+}
+
+/** Use this wallet for connect, chain switching and signing (undefined = the default window.ethereum). */
+export function selectProvider(p?: Eip1193) {
+  if (p === selected) return;
+  if (changeListeners.size) detach(currentProvider());
+  selected = p;
+  client = undefined;
+  if (changeListeners.size) attach(currentProvider());
+}
+
 function wallet(): WalletClient {
-  if (!hasInjectedWallet()) throw new WalletError('NO_WALLET', 'No browser wallet found. Install one (for example MetaMask or Rabby) and reload.');
-  client ??= createWalletClient({ chain, transport: custom(window.ethereum!) });
+  const p = currentProvider();
+  if (!p) throw new WalletError('NO_WALLET', 'No browser wallet found. Install one (for example MetaMask or Rabby) and reload.');
+  client ??= createWalletClient({ chain, transport: custom(p) });
   return client;
 }
 
@@ -91,13 +147,13 @@ export async function signTypedData(account: Address, typedData: TypedDataDefini
   }
 }
 
+/** Account or network changed in the wallet in use. Follows the wallet when a different one is selected. */
 export function onWalletChange(cb: () => void): () => void {
-  if (isMockWallet() || !hasInjectedWallet()) return () => {};
-  const eth = window.ethereum as unknown as { on?: (e: string, f: () => void) => void; removeListener?: (e: string, f: () => void) => void };
-  eth.on?.('accountsChanged', cb);
-  eth.on?.('chainChanged', cb);
+  if (isMockWallet()) return () => {};
+  if (changeListeners.size === 0) attach(currentProvider());
+  changeListeners.add(cb);
   return () => {
-    eth.removeListener?.('accountsChanged', cb);
-    eth.removeListener?.('chainChanged', cb);
+    changeListeners.delete(cb);
+    if (changeListeners.size === 0) detach(currentProvider());
   };
 }
