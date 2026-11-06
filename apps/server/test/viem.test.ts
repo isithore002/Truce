@@ -270,3 +270,56 @@ describe("ViemChain.cancelAuthorization", () => {
     expect(wallet.writeContract).not.toHaveBeenCalled();
   });
 });
+
+describe("ViemChain.refund", () => {
+  const refundErrors = parseAbi(["error NotPaid()", "error NotPayout()", "error RefundExceedsPaid()"]);
+  const contractRevert = (name: string) =>
+    new ContractFunctionRevertedError({ abi: refundErrors as never, data: encodeErrorResult({ abi: refundErrors, errorName: name } as never), functionName: "refund" });
+  const auth = { from: PAYOUT, validAfter: 0n, validBefore: 9_999_999_999n, v: 27, r: TX, s: TX };
+
+  it("simulates, then sends the payout wallet's signed refund to the settler", async () => {
+    const { chain, pub, wallet } = make();
+    const out = await chain.refund(TX, 5_000n, auth);
+    expect(out.txHash).toBe(TX);
+    expect(pub.simulateContract).toHaveBeenCalledTimes(1);
+    expect((pub.simulateContract as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0]).toMatchObject({
+      address: SETTLER,
+      functionName: "refund",
+      args: [TX, 5_000n, { from: PAYOUT, validAfter: 0n, validBefore: 9_999_999_999n, v: 27, r: TX, s: TX }],
+    });
+    expect(wallet.writeContract).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["NotPaid", "NOT_PAID"],
+    ["NotPayout", "AUTH_INVALID"],
+    ["RefundExceedsPaid", "REFUND_EXCEEDS_PAID"],
+  ])("maps the contract's %s revert to %s and sends nothing", async (name, code) => {
+    const { chain, wallet, budget } = make({ simulateContract: vi.fn(async () => { throw contractRevert(name); }) });
+    await expect(chain.refund(TX, 5_000n, auth)).rejects.toMatchObject({ code });
+    expect(wallet.writeContract).not.toHaveBeenCalled();
+    expect(budget.spentWei()).toBe(0n);
+  });
+
+  it("stops at the budget cap after simulating, before sending", async () => {
+    const { chain, wallet } = make({}, { budget: new RelayerBudget(1n) });
+    await expect(chain.refund(TX, 5_000n, auth)).rejects.toMatchObject({ code: "RELAYER_BUDGET_EXHAUSTED" });
+    expect(wallet.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("rate limits per caller before touching the chain", async () => {
+    const { chain, pub } = make({}, { limiter: new RateLimiter(1, 60_000) });
+    await chain.refund(TX, 1n, auth, { clientKey: "1.2.3.4" });
+    await expect(chain.refund(TX, 1n, auth, { clientKey: "1.2.3.4" })).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(pub.simulateContract).toHaveBeenCalledTimes(1);
+  });
+
+  it("records the real gas cost against the budget and reports a slow confirmation as PENDING", async () => {
+    const ok = make();
+    await ok.chain.refund(TX, 1n, auth);
+    expect(ok.budget.spentWei()).toBe(150_000n * 10_000_000_000n);
+
+    const slow = make({ waitForTransactionReceipt: vi.fn(async () => { throw new Error("timeout"); }) });
+    await expect(slow.chain.refund(TX, 1n, auth)).rejects.toMatchObject({ code: "PENDING", details: { txHash: TX } });
+  });
+});

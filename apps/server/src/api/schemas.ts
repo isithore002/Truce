@@ -45,6 +45,24 @@ export const VerifyQuery = z.object({
   buyer: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "buyer must be an address").optional(),
 });
 
+/** The payout wallet's signed refund authorization. The amount is in token base units (USDT has 6 decimals). */
+export const RefundBody = z.object({
+  amount: uintString,
+  from: z.string().transform((a, ctx): Address => {
+    try {
+      return getAddress(a);
+    } catch {
+      ctx.addIssue({ code: "custom", message: "from is not a valid address" });
+      return z.NEVER;
+    }
+  }),
+  validAfter: uintString,
+  validBefore: uintString,
+  v: z.number().int().refine((v) => v === 27 || v === 28, "v must be 27 or 28"),
+  r: bytes32,
+  s: bytes32,
+});
+
 /** Buyer-signed CancelAuthorization (v, r, s). */
 export const CancelBody = z.object({
   v: z.number().int().refine((v) => v === 27 || v === 28, "v must be 27 or 28"),

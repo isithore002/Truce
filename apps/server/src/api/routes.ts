@@ -7,7 +7,7 @@ import { ApiError } from "./errors.js";
 import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
-import { AddressParam, AuthorizeBody, CancelBody, HashParam, VerifyQuery } from "./schemas.js";
+import { AddressParam, AuthorizeBody, CancelBody, HashParam, RefundBody, VerifyQuery } from "./schemas.js";
 import { effectiveStatus, summarize } from "./status.js";
 
 export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -267,6 +267,58 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
       x.events.push({ at: ctx.now(), type: "cancelled", detail: "the buyer cancelled the authorization", txHash });
     });
     return reply.status(200).send({ status: "CANCELLED", txHash });
+  });
+
+  // Relays a refund the payout wallet signed. The contract fixes the nonce, the recipient (the payer recorded at
+  // settlement) and the cap, so the most this route can do is deliver exactly what the payout wallet authorized.
+  const refundLimiter = new RateLimiter(20, 60_000);
+  const refunding = new Set<Hex>();
+  app.post("/api/invoices/:hash/refund", async (req, reply) => {
+    refundLimiter.check(req.ip);
+    const { hash } = HashParam.parse(req.params);
+    const body = RefundBody.parse(req.body);
+    const rec = await store.get(hash);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    if (rec.status !== "PAID") throw new ApiError("NOT_PAID", "This invoice has not been paid, so there is nothing to refund.");
+    const parsed = parseInvoiceDoc(rec.doc);
+    if (!parsed.ok) throw new ApiError("INTERNAL", "The stored invoice is damaged.");
+    const inv = parsed.value.invoice;
+    const amount = BigInt(body.amount);
+    if (body.from.toLowerCase() !== inv.payout.toLowerCase()) {
+      throw new ApiError("AUTH_INVALID", "A refund must be signed by the invoice's payout wallet.");
+    }
+    if (amount === 0n) throw new ApiError("INVALID_DOCUMENT", "Enter a refund amount above 0.");
+    const onchain = await chain.onchainStatus(hash); // the chain is the source of truth for what was already refunded
+    if (!onchain.paid) throw new ApiError("NOT_PAID", "This invoice has not been paid, so there is nothing to refund.");
+    const remaining = inv.amount - onchain.refunded;
+    if (amount > remaining) {
+      throw new ApiError("REFUND_EXCEEDS_PAID", "That refund is more than what is left to refund.", { remaining: remaining.toString() });
+    }
+    if (refunding.has(hash)) throw new ApiError("DUPLICATE", "A refund for this invoice is already being sent.");
+    refunding.add(hash);
+    try {
+      const auth = { from: body.from, validAfter: BigInt(body.validAfter), validBefore: BigInt(body.validBefore), v: body.v, r: body.r as Hex, s: body.s as Hex };
+      let txHash: Hex;
+      try {
+        ({ txHash } = await chain.refund(hash, amount, auth, { clientKey: req.ip }));
+      } catch (e) {
+        if (e instanceof ChainError && e.code === "PENDING") {
+          const pendingTx = e.details?.txHash as Hex | undefined;
+          await store.update(hash, (x) => {
+            x.events.push({ at: ctx.now(), type: "refund_pending", detail: amount.toString(), txHash: pendingTx });
+          });
+          return reply.status(202).send({ status: "PENDING", txHash: pendingTx });
+        }
+        throw e;
+      }
+      await store.update(hash, (x) => {
+        x.events.push({ at: ctx.now(), type: "refunded", detail: amount.toString(), txHash });
+      });
+      const refunded = onchain.refunded + amount;
+      return reply.status(200).send({ status: "REFUNDED", txHash, amount: amount.toString(), refunded: refunded.toString(), remaining: (inv.amount - refunded).toString() });
+    } finally {
+      refunding.delete(hash);
+    }
   });
 
   // Try a scheduled collection now (rate limited). It can only act on an authorization the buyer already signed.

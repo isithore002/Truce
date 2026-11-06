@@ -11,6 +11,8 @@ export type ChainErrorCode =
   | "SIMULATION_FAILED"
   | "INSUFFICIENT_BALANCE"
   | "ALREADY_PAID"
+  | "NOT_PAID"
+  | "REFUND_EXCEEDS_PAID"
   | "RELAYER_BUDGET_EXHAUSTED"
   | "RATE_LIMITED"
   | "NOT_IMPLEMENTED"
@@ -39,6 +41,9 @@ const CONTRACT_ERRORS: Record<string, [ChainErrorCode, string]> = {
   TokenNotAllowed: ["TOKEN_NOT_ALLOWED", "The payment contract does not accept this token."],
   InvalidInvoice: ["INVALID_DOCUMENT", "The invoice has an invalid amount or payout."],
   UnexpectedBalanceChange: ["SIMULATION_FAILED", "The token did not deliver the exact amount, so the payment was refused."],
+  NotPaid: ["NOT_PAID", "This invoice has not been paid, so there is nothing to refund."],
+  NotPayout: ["AUTH_INVALID", "A refund must be signed by the invoice’s payout wallet."],
+  RefundExceedsPaid: ["REFUND_EXCEEDS_PAID", "That refund is more than what is left to refund."],
   EnforcedPause: ["SIMULATION_FAILED", "Payments are paused."],
   ERC20InsufficientBalance: ["INSUFFICIENT_BALANCE", "The buyer's balance is too low to pay this invoice."],
 };

@@ -12,7 +12,7 @@ import { invoiceHash, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib
 import { settlerAbi, type ChainConfig } from "./config.js";
 import { ChainError, mapChainError } from "./errors.js";
 import { RateLimiter, RelayerBudget } from "./limits.js";
-import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus } from "./types.js";
+import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus, RefundAuth } from "./types.js";
 
 /** The slice of a viem public client this module uses (narrow, so tests can fake it). */
 export interface PublicApi {
@@ -249,6 +249,45 @@ export class ViemChain implements ChainModule {
     } catch (e) {
       if (e instanceof ChainError) throw e;
       throw new ChainError("PENDING", "The cancellation was sent but is not confirmed yet.", { txHash });
+    }
+    return { txHash };
+  }
+
+  /**
+   * Relays the payout wallet's signed refund (the wallet signs; the relayer pays the gas). The contract fixes the
+   * nonce, the recipient (the payer recorded at settlement) and the cap, so this method cannot redirect money.
+   * Simulates first: a refund the contract would reject sends nothing and costs nothing.
+   */
+  async refund(hash: Hex, amount: bigint, auth: RefundAuth, meta?: CallMeta): Promise<{ txHash: Hex }> {
+    this.limiter.check(meta?.clientKey);
+    const args = [hash, amount, { from: auth.from, validAfter: auth.validAfter, validBefore: auth.validBefore, v: auth.v, r: auth.r, s: auth.s }] as const;
+    const call = { account: this.account, address: this.cfg.settler, abi: settlerAbi, functionName: "refund", args } as const;
+    let request: unknown;
+    let gas: bigint;
+    let gasPrice: bigint;
+    try {
+      await this.assertChain();
+      ({ request } = await this.pub.simulateContract(call));
+      gas = ((await this.pub.estimateContractGas(call)) * GAS_PAD_NUM) / GAS_PAD_DEN;
+      gasPrice = await this.pub.getGasPrice();
+    } catch (e) {
+      throw mapChainError(e);
+    }
+    const reservation = this.budget.reserve(gas * gasPrice);
+    let txHash: Hex;
+    try {
+      txHash = await this.wallet.writeContract({ ...(request as object), gas });
+    } catch (e) {
+      reservation.release();
+      throw mapChainError(e);
+    }
+    try {
+      const receipt = await this.pub.waitForTransactionReceipt({ hash: txHash, timeout: this.cfg.confirmTimeoutMs });
+      reservation.commit(receipt.gasUsed * receipt.effectiveGasPrice + (receipt.l1Fee ?? 0n));
+      if (receipt.status !== "success") throw new ChainError("SIMULATION_FAILED", "The refund failed on chain.", { txHash });
+    } catch (e) {
+      if (e instanceof ChainError) throw e;
+      throw new ChainError("PENDING", "The refund was sent but is not confirmed yet.", { txHash });
     }
     return { txHash };
   }

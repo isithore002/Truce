@@ -5,12 +5,13 @@ import {
   TRACK_USDT,
   invoiceHash,
   recoverMerchant,
+  refundNonce,
   tokenDomain,
   type BuyerAuth,
   type InvoiceDoc,
 } from "@truce/invoice-lib";
 import { ChainError } from "./errors.js";
-import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus } from "./types.js";
+import type { CallMeta, ChainModule, ChainPublicConfig, ChainStatus, HealthReason, OnchainStatus, RefundAuth } from "./types.js";
 
 export interface MockChainOptions {
   chainId?: number;
@@ -32,6 +33,8 @@ interface MockPayment {
   payer: Address;
   payout: Address;
   amount: bigint;
+  /** Total refunded so far, never above `amount`. */
+  refunded: bigint;
   txHash: Hex;
 }
 
@@ -152,7 +155,7 @@ export class MockChain implements ChainModule {
     this.balances.set(inv.payout.toLowerCase(), this.balanceOf(inv.payout) + inv.amount);
     this.usedNonces.add(`${auth.from.toLowerCase()}:${hash}`);
     const txHash = this.fakeTx(hash);
-    this.payments.set(hash, { payer: auth.from, payout: inv.payout, amount: inv.amount, txHash });
+    this.payments.set(hash, { payer: auth.from, payout: inv.payout, amount: inv.amount, refunded: 0n, txHash });
     return { txHash };
   }
 
@@ -190,9 +193,43 @@ export class MockChain implements ChainModule {
     return { txHash: this.fakeTx(nonce) };
   }
 
+  /** Same order as InvoiceSettler.refund: paid, signed by the payout wallet, within the cap, then the token's own checks. */
+  async refund(hash: Hex, amount: bigint, auth: RefundAuth, _meta?: CallMeta): Promise<{ txHash: Hex }> {
+    await this.delay();
+    const p = this.payments.get(hash);
+    if (!p) throw new ChainError("NOT_PAID", "This invoice has not been paid, so there is nothing to refund.");
+    if (!same(auth.from, p.payout)) throw new ChainError("AUTH_INVALID", "A refund must be signed by the invoice’s payout wallet.");
+    if (amount === 0n || amount > p.amount - p.refunded) throw new ChainError("REFUND_EXCEEDS_PAID", "That refund is more than what is left to refund.");
+
+    const nonce = refundNonce(hash, p.refunded);
+    const message = { from: auth.from, to: this.config.settler, value: amount, validAfter: auth.validAfter, validBefore: auth.validBefore, nonce };
+    let signer: Address | undefined;
+    try {
+      signer = await recoverTypedDataAddress({
+        domain: tokenDomain(this.tokenCtx(this.config.tokens[0])),
+        types: RECEIVE_AUTHORIZATION_TYPES,
+        primaryType: "ReceiveWithAuthorization",
+        message,
+        signature: sigOf(auth.v, auth.r, auth.s),
+      });
+    } catch {
+      signer = undefined;
+    }
+    if (!signer || !same(signer, auth.from)) throw new ChainError("AUTH_INVALID", "The refund authorization is not valid (wrong signature, amount or recipient).");
+    const t = this.now();
+    if (!(t > auth.validAfter)) throw new ChainError("AUTH_INVALID", "The refund authorization is not valid yet.");
+    if (!(t < auth.validBefore)) throw new ChainError("AUTH_INVALID", "The refund authorization has expired.");
+    if (this.balanceOf(p.payout) < amount) throw new ChainError("INSUFFICIENT_BALANCE", "The payout wallet's balance is too low to refund this amount.");
+
+    this.balances.set(p.payout.toLowerCase(), this.balanceOf(p.payout) - amount);
+    this.balances.set(p.payer.toLowerCase(), this.balanceOf(p.payer) + amount);
+    p.refunded += amount;
+    return { txHash: this.fakeTx(nonce) };
+  }
+
   async onchainStatus(hash: Hex): Promise<OnchainStatus> {
     const p = this.payments.get(hash);
-    return p ? { paid: true, refunded: 0n, payer: p.payer, txHash: p.txHash } : { paid: false, refunded: 0n };
+    return p ? { paid: true, refunded: p.refunded, payer: p.payer, txHash: p.txHash } : { paid: false, refunded: 0n };
   }
 
   async status(): Promise<ChainStatus> {

@@ -33,6 +33,16 @@ export interface OnchainStatus {
   txHash?: Hex;
 }
 
+/** The payout wallet's signed EIP-3009 authorization for one refund (to = the settler, value = the refund amount). */
+export interface RefundAuth {
+  from: Address;
+  validAfter: bigint;
+  validBefore: bigint;
+  v: number;
+  r: Hex;
+  s: Hex;
+}
+
 /** docs/INTERFACES.md section 7. The API and the scheduler talk to the chain only through this. */
 export interface ChainModule {
   readonly config: ChainPublicConfig;
@@ -42,6 +52,8 @@ export interface ChainModule {
   health(doc: InvoiceDoc, auth: BuyerAuth): Promise<{ ok: boolean; reason: HealthReason; balance: bigint }>;
   /** Relays the buyer's signed CancelAuthorization. */
   cancelAuthorization(from: Address, nonce: Hex, sig: { v: number; r: Hex; s: Hex }): Promise<{ txHash: Hex }>;
+  /** Relays the payout wallet's signed refund. The contract pays only the recorded payer, capped at what is left. Simulates first. */
+  refund(hash: Hex, amount: bigint, auth: RefundAuth, meta?: CallMeta): Promise<{ txHash: Hex }>;
   onchainStatus(hash: Hex): Promise<OnchainStatus>;
   /** RPC and relayer snapshot for /healthz. Throws if the chain cannot be reached. */
   status(): Promise<ChainStatus>;
