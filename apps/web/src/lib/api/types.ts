@@ -74,7 +74,19 @@ export interface VerifyResponse {
   onchain?: { paid: boolean; payer?: Address; refunded?: string; txHash?: Hex; unavailable?: boolean };
 }
 
-export const STATUSES = ['ISSUED', 'SCHEDULED_OK', 'AT_RISK', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED'] as const;
+/** GET /api/domain-check: does the file on the merchant's domain list the wallets they are about to use? */
+export type DomainCheckStatus = 'OK' | 'UNREACHABLE' | 'INVALID_FILE' | 'SIGNER_MISMATCH' | 'PAYOUT_NOT_LISTED' | 'CHAIN_NOT_LISTED';
+export interface DomainCheck {
+  status: DomainCheckStatus;
+  domain: string;
+  /** Plain-language result written by the server. */
+  message: string;
+  /** True when the answer came from the server's fictional example list rather than from the internet. */
+  demo: boolean;
+  listed?: { signingAddress: Address; payoutAddresses: Address[] };
+}
+
+export const STATUSES =['ISSUED', 'SCHEDULED_OK', 'AT_RISK', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED'] as const;
 export type Status = (typeof STATUSES)[number];
 export const OVERLAYS = ['PARTIALLY_REFUNDED', 'REFUNDED'] as const;
 export type Overlay = (typeof OVERLAYS)[number];

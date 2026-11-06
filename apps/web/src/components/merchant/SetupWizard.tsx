@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../app/AppContext';
+import { api } from '../../lib/api';
+import type { DomainCheck } from '../../lib/api/types';
 import { isAddress } from '../../lib/format';
 import { buildDomainFile, downloadBlob, loadSetup, saveSetup, validateDomain, type MerchantSetup } from '../../lib/merchantSetup';
 import { normaliseDomain } from '../../lib/pins';
@@ -11,7 +13,8 @@ export function SetupWizard() {
   const { wallet, connect, toast } = useApp();
   const [s, setS] = useState<MerchantSetup>(loadSetup);
   const [touched, setTouched] = useState(false);
-  const [published, setPublished] = useState(false);
+  const [check, setCheck] = useState<{ key: string; result?: DomainCheck; error?: string }>();
+  const [checking, setChecking] = useState(false);
   const domain = normaliseDomain(s.domain);
   const domainErr = validateDomain(s.domain);
   const payoutErr = isAddress(s.payout) ? undefined : 'Enter a wallet address: 0x and 40 hex characters';
@@ -20,7 +23,24 @@ export function SetupWizard() {
   const ready = !!wallet.address && !domainErr && !payoutErr && !nameErr && !!file;
   const json = file ? JSON.stringify(file, null, 2) : '';
   const fieldsDone = touched && !domainErr && !payoutErr && !nameErr;
-  const done = [!!wallet.address, fieldsDone, published && ready, false];
+  // The result belongs to the exact domain and wallets it was run for; change any of them and it no longer counts.
+  const checkKey = `${domain}|${wallet.address ?? ''}|${s.payout}`;
+  const current = check?.key === checkKey ? check : undefined;
+  const verified = current?.result?.status === 'OK';
+  const done = [!!wallet.address, fieldsDone, ready && verified, false];
+
+  async function runCheck() {
+    if (!ready || !wallet.address || !isAddress(s.payout)) return;
+    const key = checkKey;
+    setChecking(true);
+    try {
+      setCheck({ key, result: await api.checkDomain(domain, wallet.address, s.payout) });
+    } catch (e) {
+      setCheck({ key, error: e instanceof Error ? e.message : 'The check could not run.' });
+    } finally {
+      setChecking(false);
+    }
+  }
   const active = done.findIndex((d) => !d);
   const stepState = (i: number) => (done[i] ? 'done' : i === active ? 'active' : 'todo');
   const set = (k: keyof MerchantSetup) => (e: React.ChangeEvent<HTMLInputElement>) => setS({ ...s, [k]: e.target.value });
@@ -79,19 +99,46 @@ export function SetupWizard() {
               <p className="small">Upload this file so it opens at <code>https://{domain}/.well-known/truce.json</code>.</p>
               <pre className="codeblock" aria-label="truce.json contents">{json}</pre>
               <div className="btn-row">
-                <button type="button" className="btn btn--primary" onClick={() => { downloadBlob(new Blob([json + '\n'], { type: 'application/json' }), 'truce.json'); setPublished(true); }}>
+                <button type="button" className="btn btn--secondary" onClick={() => downloadBlob(new Blob([json + '\n'], { type: 'application/json' }), 'truce.json')}>
                   <Icon name="download" size={18} />Download truce.json
                 </button>
-                <button type="button" className="btn btn--secondary" onClick={() => void navigator.clipboard?.writeText(json).then(() => { toast('Copied'); setPublished(true); })}>
+                <button type="button" className="btn btn--secondary" onClick={() => void navigator.clipboard?.writeText(json).then(() => toast('Copied'))}>
                   <Icon name="copy" size={18} />Copy contents
                 </button>
               </div>
               <ul className="small stack stack--sm" style={{ paddingLeft: 18, margin: 0 }}>
                 <li>Put the file in a folder named <code>.well-known</code> at the root of your site.</li>
-                <li>Serve it over HTTPS with <code>Content-Type: application/json</code>.</li>
-                <li>Check it opens: <code>curl https://{domain}/.well-known/truce.json</code></li>
+                <li>Serve it over HTTPS with <code>Content-Type: application/json</code>, at exactly that address (a redirect, for example from <code>www</code>, is not followed).</li>
                 <li>Changing a wallet later is fine, but buyers who paid before will see a warning.</li>
+                {domain.endsWith('.example') && (
+                  <li>Names ending in <code>.example</code> are fictional demo domains and cannot be published on the internet. A demo server answers for them from its own example list.</li>
+                )}
               </ul>
+              <div className="btn-row">
+                <button type="button" className="btn btn--primary" onClick={() => void runCheck()} disabled={checking} data-testid="check-domain">
+                  <Icon name="check" size={18} />{checking ? 'Checking…' : 'Check my domain'}
+                </button>
+                <span className="small muted">Reads the file from your domain now, the way your buyers’ check does.</span>
+              </div>
+              {checking && <output className="small muted">Reading https://{domain}/.well-known/truce.json…</output>}
+              {current?.error && (
+                <div className="notice notice--warn" role="alert"><Icon name="alert" /><p>{current.error}</p></div>
+              )}
+              {current?.result && (
+                <div className={`notice ${verified ? 'notice--ok' : 'notice--bad'}`} role={verified ? 'status' : 'alert'} data-testid="domain-check-result">
+                  <Icon name={verified ? 'check' : 'alert'} />
+                  <div className="stack stack--sm">
+                    <p><strong>{verified ? 'Your domain is set up.' : 'Not set up yet.'}</strong> {current.result.message}</p>
+                    {current.result.listed && !verified && (
+                      <div className="stack stack--sm">
+                        <p className="small">The file currently lists:</p>
+                        <AddressChip value={current.result.listed.signingAddress} label="Signing wallet" />
+                        {current.result.listed.payoutAddresses.map((a) => <AddressChip key={a} value={a} label="Payout wallet" />)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -1,5 +1,5 @@
 import type {
-  Address, ApiErrorBody, BuyerAuth, CancelSig, CreateInvoiceResult, Healthz, Hex, InvoiceDoc, InvoiceRecord,
+  Address, ApiErrorBody, BuyerAuth, CancelSig, CreateInvoiceResult, DomainCheck, Healthz, Hex, InvoiceDoc, InvoiceRecord,
   HealthReason, InvoiceSummary, PublicConfig, RefundRequest, RefundResult, VerifyResponse,
 } from './types';
 import type { ServerAuthorize, ServerConfig, ServerHealthz, ServerInvoice, ServerSummary } from './serverTypes';
@@ -24,6 +24,8 @@ export interface TruceApi {
   /** The same invoices as a journal: one row per money movement (issued, payment, refund). */
   exportLedger(address: Address): Promise<Blob>;
   healthz(): Promise<Healthz>;
+  /** Setup page: reads the domain's published wallet list fresh and compares it with the merchant's wallets. */
+  checkDomain(domain: string, signer: Address, payout: Address): Promise<DomainCheck>;
 }
 
 export class ApiError extends Error {
@@ -96,4 +98,6 @@ export const httpApi: TruceApi = {
   exportCsv: (address) => request<Blob>(`/api/merchants/${address}/export.csv`, {}, 'blob'),
   exportLedger: (address) => request<Blob>(`/api/merchants/${address}/ledger.csv`, {}, 'blob'),
   healthz: async () => fromServer.healthz(await request<ServerHealthz>('/healthz')),
+  checkDomain: (domain, signer, payout) =>
+    request<DomainCheck>(`/api/domain-check?${new URLSearchParams({ domain, signer, payout }).toString()}`),
 };

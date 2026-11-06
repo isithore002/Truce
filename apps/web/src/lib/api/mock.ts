@@ -256,6 +256,19 @@ export const mockApi: TruceApi = {
       .slice(0, 6);
     return { ok: true, chainMode: 'mock', block: String(block), relayerBalanceWei: '1840000000000000000', lastEvents };
   },
+
+  /** Scripted: only the example merchant's file exists in mock mode. The real wording comes from the server in server mode. */
+  async checkDomain(domain, signer, payout) {
+    await wait(400);
+    const name = domain.trim().toLowerCase();
+    const file = DOMAIN_FILES[name];
+    const where = `https://${name}/.well-known/truce.json`;
+    if (!file) return { status: 'UNREACHABLE', domain: name, demo: name.endsWith('.example'), message: `Could not read ${where}: the server answered HTTP 404. Buyers would see FAIL. (Mock mode: only the example merchant has a file.)` };
+    const listed = { signingAddress: file.signingAddress, payoutAddresses: file.payoutAddresses };
+    if (!sameAddress(file.signingAddress, signer)) return { status: 'SIGNER_MISMATCH', domain: name, demo: true, listed, message: `Found ${name}, but it lists a different signing wallet than the one you connected. (Mock mode)` };
+    if (!file.payoutAddresses.some((a) => sameAddress(a, payout))) return { status: 'PAYOUT_NOT_LISTED', domain: name, demo: true, listed, message: `Found ${name}, but your payout wallet is not in its list. (Mock mode)` };
+    return { status: 'OK', domain: name, demo: true, listed, message: `Found the example list for ${name}. It lists your signing wallet and payout wallet. (Mock mode)` };
+  },
 };
 
 /** Demo helper: the signed copy for a hash, so /demo can build tampered links from it. */

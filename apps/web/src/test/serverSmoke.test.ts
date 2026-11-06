@@ -154,6 +154,25 @@ describe.skipIf(!run)('web client against apps/server', () => {
     expect(failed).toEqual(['payout_in_domain_file']);
   });
 
+  it('the setup page check: OK for the listed wallets, and says what is wrong otherwise', async () => {
+    const payout = await payoutFromDomain();
+    const ok = await httpApi.checkDomain(DOMAIN, merchant.address, payout);
+    expect(ok.status).toBe('OK');
+    expect(ok.demo).toBe(true);
+
+    const other = await httpApi.checkDomain(DOMAIN, buyer.address, payout); // a wallet the domain does not list
+    expect(other.status).toBe('SIGNER_MISMATCH');
+    expect(other.listed?.signingAddress.toLowerCase()).toBe(merchant.address.toLowerCase());
+
+    const unlisted = await httpApi.checkDomain(DOMAIN, merchant.address, '0x000000000000000000000000000000000000dEaD');
+    expect(unlisted.status).toBe('PAYOUT_NOT_LISTED');
+
+    const none = await httpApi.checkDomain('no-such-merchant.example', merchant.address, payout);
+    expect(none.status).toBe('UNREACHABLE');
+
+    await expect(httpApi.checkDomain('localhost', merchant.address, payout)).rejects.toBeInstanceOf(ApiError);
+  });
+
   it('a due time seconds away (the demo "due in N minutes") is collected by the scheduler', async () => {
     const { cfg, doc, hash } = await makeDoc(6, 'Smoke due in seconds');
     await httpApi.createInvoice(doc);
