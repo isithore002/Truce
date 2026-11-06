@@ -8,6 +8,10 @@ import './styles/ui.css';
 import './styles/app.css';
 import './styles/motion.css';
 import './styles/dashboard.css';
+import './styles/accent.css';
+import './styles/neon.css';
+import './styles/premium.css';
+import './styles/wallet.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

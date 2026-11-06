@@ -12,26 +12,91 @@ import { randomHex } from '../invoiceLib';
 export type Purpose = 'merchant' | 'buyer';
 
 export class WalletError extends Error {
-  constructor(public code: 'NO_WALLET' | 'REJECTED' | 'WRONG_CHAIN' | 'UNKNOWN', message: string) {
+  constructor(public code: 'NO_WALLET' | 'REJECTED' | 'WRONG_CHAIN' | 'UNAUTHORIZED' | 'UNKNOWN', message: string) {
     super(message);
     this.name = 'WalletError';
   }
 }
 
 export const isMockWallet = () => config.apiMode === 'mock';
-export const hasInjectedWallet = () => typeof window !== 'undefined' && !!window.ethereum;
+
+/* ---------- which browser wallet: EIP-6963 discovery, falling back to window.ethereum ---------- */
+
+type Eip1193 = NonNullable<Window['ethereum']>;
+type Listener = (e: string, f: () => void) => void;
+
+/** A wallet that announced itself (EIP-6963). Name and icon come from the wallet itself. */
+export interface DiscoveredWallet {
+  uuid: string;
+  name: string;
+  /** data: URI supplied by the wallet */
+  icon: string;
+  rdns: string;
+  provider: Eip1193;
+}
+
+// The chosen wallet lives on window so a hot reload of this module (dev server) does not silently fall back to
+// window.ethereum, which may be a different extension than the one the user connected with.
+type Holder = { __truceWallet?: Eip1193 };
+const holder: Holder = typeof window !== 'undefined' ? (window as unknown as Holder) : {};
+let selected: Eip1193 | undefined = holder.__truceWallet;
+const currentProvider = (): Eip1193 | undefined => selected ?? (typeof window !== 'undefined' ? window.ethereum : undefined);
+export const hasInjectedWallet = () => !!currentProvider();
+
+/** Listens for wallets announcing themselves and asks them to announce now. Returns an unsubscribe function. */
+export function discoverWallets(onChange: (wallets: DiscoveredWallet[]) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const found = new Map<string, DiscoveredWallet>();
+  const onAnnounce = (e: Event) => {
+    const d = (e as CustomEvent<{ info: Omit<DiscoveredWallet, 'provider'>; provider: Eip1193 }>).detail;
+    if (!d?.info?.uuid || !d.provider) return;
+    found.set(d.info.uuid, { ...d.info, provider: d.provider });
+    onChange([...found.values()]);
+  };
+  window.addEventListener('eip6963:announceProvider', onAnnounce);
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+  return () => window.removeEventListener('eip6963:announceProvider', onAnnounce);
+}
 
 let client: WalletClient | undefined;
+const changeListeners = new Set<() => void>();
+const fire = () => changeListeners.forEach((f) => f());
+function attach(p?: Eip1193) {
+  const eth = p as unknown as { on?: Listener } | undefined;
+  eth?.on?.('accountsChanged', fire);
+  eth?.on?.('chainChanged', fire);
+}
+function detach(p?: Eip1193) {
+  const eth = p as unknown as { removeListener?: Listener } | undefined;
+  eth?.removeListener?.('accountsChanged', fire);
+  eth?.removeListener?.('chainChanged', fire);
+}
+
+/** Use this wallet for connect, chain switching and signing (undefined = the default window.ethereum). */
+export function selectProvider(p?: Eip1193) {
+  if (p === selected) return;
+  if (changeListeners.size) detach(currentProvider());
+  selected = p;
+  holder.__truceWallet = p;
+  client = undefined;
+  if (changeListeners.size) attach(currentProvider());
+}
+
 function wallet(): WalletClient {
-  if (!hasInjectedWallet()) throw new WalletError('NO_WALLET', 'No browser wallet found. Install one (for example MetaMask or Rabby) and reload.');
-  client ??= createWalletClient({ chain, transport: custom(window.ethereum!) });
+  const p = currentProvider();
+  if (!p) throw new WalletError('NO_WALLET', 'No browser wallet found. Install one (for example MetaMask or Rabby) and reload.');
+  client ??= createWalletClient({ chain, transport: custom(p) });
   return client;
 }
 
+const UNAUTHORIZED_MSG = 'Your wallet has not authorised this account for Truce. Open your wallet, select the account you connected with (or connect this one), then try again.';
+
 function mapError(e: unknown): WalletError {
-  const err = e as { code?: number; shortMessage?: string; message?: string; name?: string };
+  const err = e as { code?: number; shortMessage?: string; message?: string; name?: string; cause?: { code?: number } };
   if (e instanceof WalletError) return e;
   if (err?.code === 4001 || err?.name === 'UserRejectedRequestError') return new WalletError('REJECTED', 'You declined the request in your wallet. Nothing was signed.');
+  // EIP-1193 4100: the account or method is not authorised (usually: the active account changed after connecting)
+  if (err?.code === 4100 || err?.cause?.code === 4100 || err?.name === 'UnauthorizedProviderError') return new WalletError('UNAUTHORIZED', UNAUTHORIZED_MSG);
   return new WalletError('UNKNOWN', err?.shortMessage ?? err?.message ?? 'The wallet returned an error.');
 }
 
@@ -79,25 +144,52 @@ export async function ensureChain(): Promise<void> {
   if ((await w.getChainId()) !== chain.id) throw new WalletError('WRONG_CHAIN', 'Switch your wallet to Whitechain Sepolia (chain 1874) to continue.');
 }
 
+/** The account the wallet currently exposes to this site (eth_accounts, no prompt), or undefined. */
+export async function currentAccount(): Promise<Address | undefined> {
+  if (isMockWallet()) return undefined;
+  if (!hasInjectedWallet()) return undefined;
+  try {
+    return (await wallet().getAddresses())[0];
+  } catch {
+    return undefined;
+  }
+}
+
 export async function signTypedData(account: Address, typedData: TypedDataDefinition): Promise<Hex> {
   if (isMockWallet()) {
     await new Promise((r) => setTimeout(r, 900));
     return `${randomHex(64)}1b` as Hex;
   }
   try {
+    // Ask only for an account the wallet has authorised; a stale one makes the wallet answer 4100.
+    // eth_accounts is empty while the wallet is locked, so ask once (unlock / reconnect prompt) before giving up.
+    const has = (list: readonly Address[]) => list.some((a) => a.toLowerCase() === account.toLowerCase());
+    let authorised = await wallet().getAddresses();
+    if (!has(authorised)) {
+      authorised = await wallet().requestAddresses();
+      if (!has(authorised)) {
+        const active = authorised[0];
+        throw new WalletError(
+          'UNAUTHORIZED',
+          active
+            ? `Your wallet's active account is ${active.slice(0, 6)}…${active.slice(-4)}, but Truce is connected as ${account.slice(0, 6)}…${account.slice(-4)}. Select ${account.slice(0, 6)}…${account.slice(-4)} in your wallet, or disconnect and connect again with the account you want.`
+            : UNAUTHORIZED_MSG,
+        );
+      }
+    }
     return await wallet().signTypedData({ account, ...typedData } as Parameters<WalletClient['signTypedData']>[0]);
   } catch (e) {
     throw mapError(e);
   }
 }
 
+/** Account or network changed in the wallet in use. Follows the wallet when a different one is selected. */
 export function onWalletChange(cb: () => void): () => void {
-  if (isMockWallet() || !hasInjectedWallet()) return () => {};
-  const eth = window.ethereum as unknown as { on?: (e: string, f: () => void) => void; removeListener?: (e: string, f: () => void) => void };
-  eth.on?.('accountsChanged', cb);
-  eth.on?.('chainChanged', cb);
+  if (isMockWallet()) return () => {};
+  if (changeListeners.size === 0) attach(currentProvider());
+  changeListeners.add(cb);
   return () => {
-    eth.removeListener?.('accountsChanged', cb);
-    eth.removeListener?.('chainChanged', cb);
+    changeListeners.delete(cb);
+    if (changeListeners.size === 0) detach(currentProvider());
   };
 }

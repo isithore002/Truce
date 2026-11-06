@@ -1,0 +1,62 @@
+/*
+  Neon blue: a bright Whitechain blue with a soft halo, used where the eye should go.
+  Strongest on dark surfaces, subtle on paper. Never on PASS / FAIL, which stay green and red.
+  Loaded after accent.css. Pulses only when motion is allowed.
+*/
+:root {
+  --neon: #3d8bff;
+  --neon-core: #9cc4ff;
+  --neon-glow: 0 0 6px rgba(61, 139, 255, .85), 0 0 18px rgba(0, 102, 255, .45);
+  --neon-glow-soft: 0 0 0 1px rgba(61, 139, 255, .35), 0 0 22px -4px rgba(0, 102, 255, .45);
+  --neon-text: 0 0 8px rgba(61, 139, 255, .55), 0 0 22px rgba(0, 102, 255, .35);
+}
+
+/* ---------- interaction on paper ---------- */
+:focus-visible { outline-color: var(--neon); box-shadow: 0 0 0 4px rgba(61, 139, 255, .22), 0 0 16px rgba(0, 102, 255, .35); }
+.btn--primary:hover:not(:disabled) { box-shadow: 0 8px 20px -10px rgba(15, 50, 56, .6), var(--neon-glow-soft); }
+.nav__links a[aria-current="page"] { box-shadow: inset 0 0 0 1px rgba(61, 139, 255, .35), 0 0 14px -4px rgba(0, 102, 255, .5); }
+.nav__progress { box-shadow: 0 0 8px rgba(61, 139, 255, .8), 0 0 2px rgba(61, 139, 255, 1); }
+.dash__tabs button[aria-pressed="true"] { box-shadow: 0 2px 8px -4px rgba(16, 41, 45, .3), var(--neon-glow-soft); }
+button.dash__card.is-on, .pay-mode__opt:has(input:checked) { box-shadow: 0 0 0 1px var(--p-blue) inset, 0 0 26px -6px rgba(0, 102, 255, .55); }
+.input:focus, .select:focus, .textarea:focus, .dash__search:focus-within { box-shadow: 0 0 0 3px rgba(61, 139, 255, .18), 0 0 18px -4px rgba(0, 102, 255, .45); }
+.wallet-menu__panel { box-shadow: 0 24px 60px -20px rgba(16, 41, 45, .35), 0 0 0 1px rgba(61, 139, 255, .12), 0 0 40px -12px rgba(0, 102, 255, .35); }
+.pay-panel.is-ready { box-shadow: 0 20px 50px -28px rgba(15, 50, 56, .45), 0 0 34px -10px rgba(0, 102, 255, .45); }
+
+/* ---------- hero ---------- */
+.l-words span:nth-child(5) { color: var(--p-blue); text-shadow: var(--neon-text); }
+.wc__orbit { stroke: rgba(61, 139, 255, .55); filter: drop-shadow(0 0 4px rgba(61, 139, 255, .7)); }
+.wc__glow { background: radial-gradient(circle, rgba(0, 102, 255, .38), rgba(61, 139, 255, .12) 45%, rgba(0, 102, 255, 0) 65%); }
+.wc__chip--c { color: var(--p-blue); box-shadow: var(--shadow-card), var(--neon-glow-soft); }
+
+/* ---------- dark surfaces: payment flow band ---------- */
+.flow__rail { background: rgba(61, 139, 255, .14); box-shadow: 0 0 10px rgba(0, 102, 255, .35); }
+.flow__rail i { background-image: linear-gradient(90deg, var(--neon) 40%, transparent 40%); opacity: .9; filter: drop-shadow(0 0 4px var(--neon)); }
+.flow__packet span { background: linear-gradient(90deg, var(--p-gold), #e8d77a); box-shadow: 0 0 0 6px rgba(61, 139, 255, .18), 0 0 18px rgba(61, 139, 255, .6), 0 8px 18px -6px rgba(0, 0, 0, .5); }
+.flow__packet::after { background: var(--neon); box-shadow: var(--neon-glow); }
+.flow__nodes li[data-state="on"] .flow__icon { box-shadow: 0 0 0 1px var(--neon), 0 0 24px rgba(61, 139, 255, .65), 0 14px 30px -10px rgba(201, 195, 245, .6); }
+.flow__nodes li[data-state="done"] .flow__icon { color: var(--neon-core); border-color: rgba(61, 139, 255, .6); box-shadow: 0 0 12px -2px rgba(61, 139, 255, .45); }
+.flow__nodes li[data-state="on"] strong { text-shadow: var(--neon-text); }
+.flow__domain[data-on="true"] { border-color: var(--neon); color: #fff; box-shadow: 0 0 24px rgba(61, 139, 255, .5); }
+.flow__domain[data-on="true"]::after { border-color: var(--neon); }
+.flow__caption span { color: var(--neon); text-shadow: var(--neon-text); }
+
+/* ---------- dark surfaces: how-it-works panel, phone, lab file, scenario bar ---------- */
+.l-features__bar i { background: linear-gradient(90deg, var(--p-gold), var(--neon)); box-shadow: 0 0 10px rgba(61, 139, 255, .7); }
+.l-chip--a { border-color: rgba(61, 139, 255, .55); box-shadow: 0 0 16px -2px rgba(61, 139, 255, .55); }
+.phone { box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6), inset 0 0 0 2px #2a3436, 0 0 40px -10px rgba(0, 102, 255, .45); }
+.lab__file { box-shadow: inset 0 0 0 1px rgba(61, 139, 255, .25), 0 0 30px -12px rgba(0, 102, 255, .55); }
+.lab__file .lab__label { color: var(--neon-core); }
+.scenario-bar select:focus { outline: none; border-color: var(--neon); box-shadow: 0 0 12px rgba(61, 139, 255, .6); }
+.l-band__inner .l-dial__ring { stroke: rgba(61, 139, 255, .6); filter: drop-shadow(0 0 4px rgba(61, 139, 255, .8)); }
+.l-band__link { text-shadow: 0 0 10px rgba(61, 139, 255, .45); }
+
+/* ---------- gentle pulses, only with motion allowed ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .l-words span:nth-child(5).is-in { animation: neon-text 3.2s 1.2s ease-in-out infinite; }
+  .flow__nodes li[data-state="on"] .flow__icon { animation: neon-box 1.7s ease-in-out infinite; }
+  .wc__chip--c { animation: wc-bob 5.2s 1.2s ease-in-out infinite, neon-chip 3s ease-in-out infinite; }
+}
+@keyframes neon-text { 50% { text-shadow: 0 0 12px rgba(61, 139, 255, .85), 0 0 34px rgba(0, 102, 255, .55); } }
+@keyframes neon-box { 50% { box-shadow: 0 0 0 1px var(--neon), 0 0 36px rgba(61, 139, 255, .9), 0 14px 30px -10px rgba(201, 195, 245, .6); } }
+@keyframes neon-chip { 50% { box-shadow: var(--shadow-card), 0 0 0 1px rgba(61, 139, 255, .6), 0 0 28px -2px rgba(0, 102, 255, .7); } }
+.flow__packet span { transform: translateY(-46px); }

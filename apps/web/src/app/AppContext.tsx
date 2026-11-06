@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import type { Address, PublicConfig } from '../lib/api/types';
 import { chain, config } from '../lib/config';
 import * as w from '../lib/wallet';
+import { ConnectModal, type WalletChoice } from '../components/layout/ConnectModal';
 
 interface WalletState {
   address?: Address;
@@ -17,7 +18,12 @@ interface AppState {
   reloadConfig: () => void;
   wallet: WalletState;
   onRightChain: boolean;
+  /** Opens the connect modal; resolves with the address once connected on the right network, or undefined if closed. */
   connect: (purpose: w.Purpose) => Promise<Address | undefined>;
+  /** Connects without the modal (the mock wallet switching persona between merchant and buyer pages). */
+  reconnect: (purpose: w.Purpose) => Promise<Address | undefined>;
+  /** Name and icon of the wallet in use, as the wallet announced them. */
+  walletInfo?: WalletChoice;
   disconnect: () => void;
   switchChain: () => Promise<boolean>;
   /** pages set this when the document on screen carries details.example = true */
@@ -42,24 +48,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(
     () =>
+      // Follow the wallet: a new active account or network replaces ours; no account means the site was disconnected there.
       w.onWalletChange(async () => {
-        const chainId = await w.currentChainId();
-        setWallet((s) => ({ ...s, chainId }));
+        const [chainId, account] = await Promise.all([w.currentChainId(), w.currentAccount()]);
+        setWallet((s) => (!s.address ? { ...s, chainId } : account ? { ...s, address: account, chainId, error: undefined } : { connecting: false }));
       }),
     [],
   );
 
-  const connect = useCallback(async (purpose: w.Purpose) => {
+  const connectDirect = useCallback(async (purpose: w.Purpose) => {
     setWallet((s) => ({ ...s, connecting: true, error: undefined }));
     try {
       const { address, chainId } = await w.connect(purpose);
       setWallet({ address, chainId, connecting: false });
-      return address;
+      return { address, chainId };
     } catch (e) {
       setWallet((s) => ({ ...s, connecting: false, error: (e as Error).message }));
-      return undefined;
+      return { error: (e as Error).message };
     }
   }, []);
+  const reconnect = useCallback(async (purpose: w.Purpose) => (await connectDirect(purpose)).address, [connectDirect]);
+
+  const [walletInfo, setWalletInfo] = useState<WalletChoice>();
+  const [picker, setPicker] = useState<{ purpose: w.Purpose; resolve: (a: Address | undefined) => void }>();
+  const connect = useCallback((purpose: w.Purpose) => new Promise<Address | undefined>((resolve) => setPicker({ purpose, resolve })), []);
+  const finishPicker = useCallback((address: Address | undefined, choice?: WalletChoice) => {
+    setPicker((p) => {
+      p?.resolve(address);
+      return undefined;
+    });
+    if (address && choice) setWalletInfo({ name: choice.name, icon: choice.icon });
+  }, []);
+  const onPickerDone = useCallback((a: Address, c: WalletChoice) => finishPicker(a, c), [finishPicker]);
+  const onPickerCancel = useCallback(() => finishPicker(undefined), [finishPicker]);
 
   const switchChain = useCallback(async () => {
     try {
@@ -80,17 +101,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      publicConfig, configError, reloadConfig, wallet, connect, switchChain, toast, setPageExample,
-      disconnect: () => setWallet({ connecting: false }),
+      publicConfig, configError, reloadConfig, wallet, connect, reconnect, walletInfo, switchChain, toast, setPageExample,
+      disconnect: () => { setWallet({ connecting: false }); setWalletInfo(undefined); },
       onRightChain: wallet.chainId === chain.id,
       showExample: config.exampleMode || pageExample || !!publicConfig?.exampleMode,
     }),
-    [publicConfig, configError, reloadConfig, wallet, connect, switchChain, toast, pageExample],
+    [publicConfig, configError, reloadConfig, wallet, connect, reconnect, walletInfo, switchChain, toast, pageExample],
   );
 
   return (
     <Ctx.Provider value={value}>
       {children}
+      {picker && (
+        <ConnectModal purpose={picker.purpose} connectDirect={connectDirect} switchChain={switchChain} onDone={onPickerDone} onCancel={onPickerCancel} />
+      )}
       <output aria-live="polite" className="sr-only">{toastMsg}</output>
       {toastMsg && <div className="toast" aria-hidden="true">{toastMsg}</div>}
     </Ctx.Provider>

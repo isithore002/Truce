@@ -47,8 +47,10 @@ export function Faq({ items }: { items: { q: string; a: string }[] }) {
                 <Icon name="plus" size={18} className="faq__icon" />
               </button>
             </h3>
-            <div id={`${base}-${i}`} className="faq__panel" hidden={!isOpen}>
-              <p>{it.a}</p>
+            {/* Always rendered so it can animate open and closed (styles/premium.css); inert keeps a closed answer out of
+                the tab order and the accessibility tree, like `hidden` did. */}
+            <div id={`${base}-${i}`} className="faq__panel" inert={!isOpen} aria-hidden={!isOpen}>
+              <div><p>{it.a}</p></div>
             </div>
           </div>
         );

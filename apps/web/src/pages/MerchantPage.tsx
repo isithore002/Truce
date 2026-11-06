@@ -128,7 +128,7 @@ export function MerchantPage() {
             <li><Icon name="check" size={16} />Create and sign new invoices; no gas, nothing sent on chain</li>
             <li><Icon name="check" size={16} />Download a CSV for your accounts</li>
           </ul>
-          <button type="button" className="btn btn--primary btn--lg" onClick={() => void connect('merchant').then((a) => a && toast('Wallet connected. Your invoices are below.'))} disabled={wallet.connecting}>
+          <button type="button" className="btn btn--primary btn--lg" onClick={() => void connect('merchant')} disabled={wallet.connecting}>
             <Icon name="wallet" size={18} />{wallet.connecting ? 'Connecting…' : 'Connect wallet'}
           </button>
           <p className="small muted">Connecting only reads your address. Your key stays in your wallet, and every signature asks you first.</p>

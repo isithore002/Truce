@@ -1,6 +1,4 @@
 import { useRef, type PointerEvent } from 'react';
-import { Icon } from '../../components/Icon';
-import { explorerAddress } from '../../lib/config';
 import { prefersReducedMotion } from '../../lib/motion';
 
 /*
@@ -9,10 +7,9 @@ import { prefersReducedMotion } from '../../lib/motion';
   Used only to credit the network Truce runs on.
 */
 
-const SETTLER = '0xCbe41B98D2333a1BD92d51Fbb6FE668c5170ff9d';
 const LAYERS = 18;
 
-/** The turning 3D mark on its own (hero and the Built on Whitechain section). */
+/** The turning 3D mark in the hero. */
 export function Mark3D({ className = '' }: { className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -56,25 +53,3 @@ export function Mark3D({ className = '' }: { className?: string }) {
   );
 }
 
-export function WhitechainMark() {
-  return (
-    <div className="wc">
-      <div className="wc__copy">
-        <span className="l-eyebrow"><i aria-hidden="true" />Built on Whitechain</span>
-        <h2>Settled on Whitechain Sepolia, in USDT, with the gas paid in WBT.</h2>
-        <ul className="wc__facts">
-          <li><strong>Chain 1874</strong><span>Whitechain Sepolia testnet, about one block a second</span></li>
-          <li><strong>USDT with EIP-3009</strong><span>The buyer signs <code>receiveWithAuthorization</code> once; no approval</span></li>
-          <li><strong>Gas in WBT</strong><span>Paid by the relayer, so the buyer needs no WBT</span></li>
-          <li>
-            <strong>InvoiceSettler, verified</strong>
-            <a className="link" href={explorerAddress(SETTLER)} target="_blank" rel="noreferrer">
-              <span className="mono">{SETTLER.slice(0, 6)}…{SETTLER.slice(-4)}</span> on the explorer <Icon name="external" size={14} />
-            </a>
-          </li>
-        </ul>
-      </div>
-      <Mark3D />
-    </div>
-  );
-}
