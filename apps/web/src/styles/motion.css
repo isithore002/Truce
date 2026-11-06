@@ -2,7 +2,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   /* page entrance on every navigation (App.tsx keys .route-enter by path) */
-  .route-enter { animation: m-rise .55s var(--ease) both; }
+  .route-enter { animation: m-rise .55s var(--ease) backwards; }
 
   /* primary buttons: a light sheen sweeps across on hover */
   .btn--primary { position: relative; overflow: hidden; isolation: isolate; }
@@ -134,7 +134,7 @@ html[data-hl="amount"] [data-field="amount"] {
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
   .pay-panel.is-ready { animation: m-ang 6s linear infinite; }
-  .route-enter { animation: m-route .6s var(--ease) both; }
+  .route-enter { animation: m-route .6s var(--ease) backwards; } /* backwards: no transform lingers, so fixed drawers cover the whole screen */
 }
 @keyframes m-ang { to { --ang: 360deg; } }
 @keyframes m-route { from { opacity: 0; transform: translateY(14px) scale(.995); filter: blur(4px); } }
