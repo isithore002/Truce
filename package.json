@@ -19,7 +19,8 @@
     "e2e:api": "tsx --env-file-if-exists=.env scripts/e2e-api.ts",
     "test:all": "npm test -w @truce/invoice-lib -w @truce/server -w @truce/web --if-present && npm test -w @truce/sdk --if-present && cd contracts && forge test",
     "count:sdk-lines": "npm run count -w @truce/merchant-demo",
-    "e2e:refund": "tsx --env-file-if-exists=.env scripts/e2e-refund.ts"
+    "e2e:refund": "tsx --env-file-if-exists=.env scripts/e2e-refund.ts",
+    "e2e:due": "tsx --env-file-if-exists=.env scripts/e2e-due.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
