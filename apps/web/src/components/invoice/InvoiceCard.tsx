@@ -27,7 +27,7 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
       </div>
 
       <div className="card__body stack stack--lg">
-        <div className="inv-amount">
+        <div className="inv-amount" data-field="amount">
           <div className="stack stack--sm">
             <span className="label">Amount due</span>
             <AmountUsdt value={inv.amount} size="lg" />
@@ -39,12 +39,12 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
             )}
           </div>
           <dl className="kv">
-            <dt>Pays to</dt>
-            <dd className={payoutBad ? 'kv-bad' : undefined}><AddressChip value={inv.payout} />{payoutBad && <span className="field-error">Not listed on {doc.domain}</span>}</dd>
-            <dt>Domain</dt>
-            <dd className="mono small">{doc.domain}</dd>
-            <dt>Signed by</dt>
-            <dd className={signerBad ? 'kv-bad' : undefined}><AddressChip value={inv.merchant} />{signerBad && <span className="field-error">Not the signer listed on {doc.domain}</span>}</dd>
+            <dt data-field="payout">Pays to</dt>
+            <dd data-field="payout" className={payoutBad ? 'kv-bad' : undefined}><AddressChip value={inv.payout} />{payoutBad && <span className="field-error">Not listed on {doc.domain}</span>}</dd>
+            <dt data-field="domain">Domain</dt>
+            <dd data-field="domain" className="mono small">{doc.domain}</dd>
+            <dt data-field="signer">Signed by</dt>
+            <dd data-field="signer" className={signerBad ? 'kv-bad' : undefined}><AddressChip value={inv.merchant} />{signerBad && <span className="field-error">Not the signer listed on {doc.domain}</span>}</dd>
           </dl>
         </div>
 
@@ -56,10 +56,10 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
             {formatDay(inv.dueDate)} <span className="muted small">({relativeTime(inv.dueDate)})</span>
             <div className="small muted">Your time: {formatDateLocal(inv.dueDate)}</div>
           </dd>
-          <dt>Payable until</dt>
-          <dd>{formatDay(inv.expiry)} <span className="muted small">({relativeTime(inv.expiry)})</span></dd>
-          <dt>Who can pay</dt>
-          <dd>{locked ? <AddressChip value={inv.payer} label="Only" /> : 'Any wallet'}</dd>
+          <dt data-field="expiry">Payable until</dt>
+          <dd data-field="expiry">{formatDay(inv.expiry)} <span className="muted small">({relativeTime(inv.expiry)})</span></dd>
+          <dt data-field="payer">Who can pay</dt>
+          <dd data-field="payer">{locked ? <AddressChip value={inv.payer} label="Only" /> : 'Any wallet'}</dd>
           {details.notes && (
             <>
               <dt>Notes</dt>
@@ -70,7 +70,7 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
           <dd><AddressChip value={inv.invoiceId} kind="hash" explorer={false} /></dd>
         </dl>
 
-        <LineItems items={details.lineItems} signedAmount={inv.amount} />
+        <div data-field="lines"><LineItems items={details.lineItems} signedAmount={inv.amount} /></div>
       </div>
     </article>
   );

@@ -2,9 +2,21 @@ import type { Check } from '../../lib/api/types';
 import { CHECK_IDS } from '../../lib/api/types';
 import { checkMessage } from '../../lib/messages';
 import { Icon } from '../Icon';
+import { useEffect } from 'react';
+
+/** Which invoice field each check guards; hovering or focusing a check highlights it on the invoice card (styles/app.css). */
+const FIELD: Partial<Record<string, string>> = {
+  signature_valid: 'signer', merchant_matches_domain_file: 'signer', payout_in_domain_file: 'payout', domain_file_reachable: 'domain',
+  domain_hash_matches: 'domain', chain_and_token_allowed: 'amount', not_expired: 'expiry', memo_hash_matches_details: 'lines', payer_ok: 'payer',
+};
+const highlight = (field?: string) => {
+  if (field) document.documentElement.dataset.hl = field;
+  else delete document.documentElement.dataset.hl;
+};
 
 /** The ten checks in a fixed order, in plain words. Failing rows come first and are highlighted. */
 export function VerificationChecklist({ checks, domain, loading }: { checks?: Check[]; domain: string; loading?: boolean }) {
+  useEffect(() => () => highlight(), []); // clear the highlight when the list goes away
   if (loading || !checks) {
     return (
       <div className="card card--flush" aria-hidden="true">
@@ -24,13 +36,14 @@ export function VerificationChecklist({ checks, domain, loading }: { checks?: Ch
     <section className="card card--flush" aria-labelledby="checks-title">
       <div className="card__head">
         <h3 id="checks-title">Checks</h3>
-        <span className="small muted">{passed} of {checks.length} passed</span>
+        <span className="small muted">{passed} of {checks.length} passed · hover a check to see what it guards</span>
       </div>
       <ul className="checklist">
         {sorted.map((c, i) => {
           const m = checkMessage(c.id, c.ok, { domain });
           return (
-            <li key={c.id} data-ok={c.ok} data-check={c.id} style={{ ['--i' as string]: i }}>
+            <li key={c.id} data-ok={c.ok} data-check={c.id} style={{ ['--i' as string]: i }} tabIndex={FIELD[c.id] ? 0 : undefined}
+              onMouseEnter={() => highlight(FIELD[c.id])} onMouseLeave={() => highlight()} onFocus={() => highlight(FIELD[c.id])} onBlur={() => highlight()}>
               <span className="checklist__icon"><Icon name={c.ok ? 'check' : 'x'} /></span>
               <div>
                 <strong>

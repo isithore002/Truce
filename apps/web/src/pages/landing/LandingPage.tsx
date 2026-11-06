@@ -8,6 +8,7 @@ import { useCountUp, useReveal, useScrollProgress } from '../../lib/motion';
 import { FAQ, Faq } from './Faq';
 import { LiveCheck, PaymentFlow } from './Animated';
 import { DashboardFrame, PhoneMock } from './Mockups';
+import { TamperLab } from './TamperLab';
 
 /*
   Layout follows the "teal treasury" reference template the user chose: hero, product UI in a device frame, stat row,
@@ -179,6 +180,17 @@ export function LandingPage() {
             <p>The same ten checks run on every pay page. Change one wallet after the merchant signed, and the Pay button never wakes up.</p>
           </div>
           <div data-reveal data-reveal-delay="120"><LiveCheck /></div>
+        </div>
+      </section>
+
+      <section className="l-lab" aria-labelledby="lab-h">
+        <div className="wrap">
+          <div className="l-sec-head" data-reveal>
+            <span className="l-eyebrow"><i aria-hidden="true" />Tamper lab</span>
+            <h2 id="lab-h">Now try to break it yourself.</h2>
+            <p>A real invoice, signed in your browser with a throwaway key. Change the amount, swap the payout wallet or sign as an attacker, and watch the same checks the pay page runs.</p>
+          </div>
+          <div data-reveal data-reveal-delay="120"><TamperLab /></div>
         </div>
       </section>
 

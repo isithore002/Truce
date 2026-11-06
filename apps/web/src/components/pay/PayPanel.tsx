@@ -32,7 +32,7 @@ export function PayPanel({ gate, amount, dueDate, mode, onMode, dueDateFeature, 
         : `Pay ${amt} USDT`;
 
   return (
-    <section className="card stack" aria-labelledby="pay-title">
+    <section className={`card stack pay-panel${gate.enabled ? ' is-ready' : ''}`} aria-labelledby="pay-title">
       <h3 id="pay-title">Pay this invoice</h3>
       {dueDateFeature && gate.enabled && (
         <fieldset className="pay-mode" disabled={busy}>

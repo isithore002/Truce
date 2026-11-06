@@ -88,3 +88,53 @@
 .receipt__burst i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; opacity: 0; background: var(--p-gold); }
 .receipt__burst i:nth-child(3n) { background: var(--ok); }
 .receipt__burst i:nth-child(3n + 1) { background: var(--chart-c); }
+
+/* ---------- gradients ---------- */
+body {
+  background:
+    radial-gradient(55% 45% at 0% 0%, rgba(205, 200, 246, .28), transparent 60%),
+    radial-gradient(45% 40% at 100% 0%, rgba(247, 220, 203, .32), transparent 60%),
+    radial-gradient(50% 40% at 50% 100%, rgba(168, 150, 63, .08), transparent 70%),
+    var(--p-bg);
+  background-attachment: fixed;
+}
+.page-head h1, .l-sec-head h2, .l-cta h2, .l-stats__lead, .dash-gate h1 {
+  background: linear-gradient(100deg, var(--p-ink) 0%, var(--p-ink) 45%, #24605f 75%, var(--p-gold-ink) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.l-cta h2 span { -webkit-text-fill-color: var(--p-gold-ink); }
+.btn--primary { background: linear-gradient(180deg, #1a4f57 0%, var(--p-accent) 100%); }
+.btn--primary:hover:not(:disabled) { background: linear-gradient(180deg, #22606a 0%, #12404a 100%); }
+.verdict--pass { background: linear-gradient(120deg, var(--ok-bg) 0%, #f1f8f3 60%, #ffffff 100%); }
+.verdict--fail { background: linear-gradient(120deg, var(--bad-bg) 0%, #fbefec 60%, #ffffff 100%); }
+.dash { background: linear-gradient(180deg, #ffffff, #fdfcf9); }
+.dash__total { background: linear-gradient(90deg, var(--p-ink), #24605f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dash__total small { -webkit-text-fill-color: var(--p-muted); }
+
+/* the pay panel wears a slowly turning gradient border once payment is allowed */
+@property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.pay-panel.is-ready {
+  border: 1.5px solid transparent;
+  background: linear-gradient(var(--p-card), var(--p-card)) padding-box,
+    conic-gradient(from var(--ang), var(--p-accent), var(--p-gold), var(--chart-c), var(--p-accent)) border-box;
+  box-shadow: 0 20px 50px -28px rgba(15, 50, 56, .45);
+}
+
+/* ---------- check <-> invoice field linking (VerificationChecklist sets html[data-hl]) ---------- */
+[data-field] { transition: background-color .3s var(--ease), box-shadow .3s var(--ease); border-radius: 8px; }
+html[data-hl="payout"] [data-field="payout"], html[data-hl="signer"] [data-field="signer"], html[data-hl="domain"] [data-field="domain"],
+html[data-hl="expiry"] [data-field="expiry"], html[data-hl="payer"] [data-field="payer"], html[data-hl="lines"] [data-field="lines"],
+html[data-hl="amount"] [data-field="amount"] {
+  background: rgba(168, 150, 63, .16); box-shadow: 0 0 0 3px rgba(168, 150, 63, .35);
+}
+.checklist li[tabindex] { cursor: help; transition: background-color .2s; }
+.checklist li[tabindex]:hover, .checklist li[tabindex]:focus-visible { background: rgba(168, 150, 63, .08); outline: none; }
+.checklist li[data-ok="false"][tabindex]:hover { background: #f3d6cf; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .pay-panel.is-ready { animation: m-ang 6s linear infinite; }
+  .route-enter { animation: m-route .6s var(--ease) both; }
+}
+@keyframes m-ang { to { --ang: 360deg; } }
+@keyframes m-route { from { opacity: 0; transform: translateY(14px) scale(.995); filter: blur(4px); } }
