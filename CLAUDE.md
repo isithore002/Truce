@@ -61,6 +61,7 @@ One developer builds everything. The plan, checkpoints (C1 to C5) and cut gates 
 - [x] C2 built and tested 2026-11-06 (tag `c2`): buyer page PASS/FAIL, pay now, verify page, API e2e live. The interactive wallet flow has NOT been clicked through in a browser (human check, see `docs/SUBMISSION-CHECKLIST.md`).
 - [x] C3 DONE 2026-11-06 (tag `c3`): merchant page, CSV, SDK (`createInvoice`), example app with 10 lines of integration code.
 - [x] C4 DONE (tag `c4`): key pinning. Also built after it: capped refund (contract, tests, redeploy `0xCbe41B98D2333a1BD92d51Fbb6FE668c5170ff9d`, live check), due-date mode with scheduler, health check and buyer cancel (live checks), mocked Soul badge. Autonomous run log: `docs/AUTONOMOUS-LOG.md`.
+  - web (2026-11-06): the b/web-frontend app now runs on main's stack, signs via invoice-lib and maps the real server API (create/get/list/verify/CSV/healthz checked against the server in mock chain mode); teal treasury restyle of landing and merchant dashboard. It replaces the first apps/web; its due-date and Soul UI sit behind VITE_FEATURE_DUE_DATE / VITE_FEATURE_SOUL_BADGE. Not yet clicked through with a real wallet.
 - [ ] C5 (by 08:00 Nov 7): README and `WHITECHAIN_FEEDBACK.md` written, `docs/AUDIT.md` written; STILL TO DO BY THE DEVELOPER: browser click-through, demo video (2-4 min), radar rerun check, ETHGlobal submission with Whitechain selected (`docs/SUBMISSION-CHECKLIST.md`).
 
 ## Open items (do not block)

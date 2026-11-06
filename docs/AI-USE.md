@@ -16,5 +16,7 @@ All specs, research notes and prompts that shaped the project are kept in `docs/
 - We did not copy other teams' contracts. We read some public contracts on the testnet only to assess overlap and wrote ours from scratch.
 - Example merchants, clients and invoices in the demo are fictional and labelled as examples.
 
+- **Web app (`apps/web`):** Claude Code built the frontend (pages, components, mock adapter, unit tests), wired it to `@truce/invoice-lib` and the real `apps/server` responses, restyled it to a reference look the user chose, and checked it in headless Chrome and against the server in mock chain mode. Open items are in `apps/web/FRONTEND-REQUESTS.md`.
+
 ## Team review
 _Developer to complete before submitting: what you reviewed by hand and the browser click-through you did._

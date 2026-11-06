@@ -59,7 +59,7 @@
 .btn--secondary:hover:not(:disabled) { border-color: var(--p-ink); background: rgba(16, 41, 45, .04); }
 .btn--lg { height: 56px; font-size: 18px; padding: 0 var(--s-6); }
 .btn--block { width: 100%; }
-.btn:disabled { cursor: not-allowed; opacity: 1; background: var(--p-surface); color: var(--p-muted); border-color: var(--p-line); }
+.btn:disabled { box-shadow: none; cursor: not-allowed; opacity: 1; background: var(--p-surface); color: var(--p-muted); border-color: var(--p-line); }
 .btn .arrow { width: 16px; height: 16px; transition: transform .2s var(--ease); }
 .btn:hover:not(:disabled) .arrow { transform: translateX(3px); }
 .btn-row { display: flex; gap: var(--s-3); flex-wrap: wrap; }

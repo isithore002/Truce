@@ -43,3 +43,7 @@ The two-developer split (chain side / product side) was dropped; one person now 
 ## Full scope authorised (2026-11-06)
 The developer asked for an autonomous run covering MUST + SHOULD + STRETCH (`docs/prompts/AUTONOMOUS-RUN.md`): merchant page, SDK and demo app, key pinning, refund (contract + tests, redeploy), due-date mode, health check and cancel, mocked Soul badge, docs, audit.
 This is the written exception to the scope-change rule. Refund UI stays out (contract + tests only). Hosting (T30) stays out. Progress is logged in `docs/AUTONOMOUS-LOG.md`.
+
+## Build choices
+- 2026-11-06, web: the `b/web-frontend` app (mock adapter, /setup, /demo, key pinning, pay gate tests) replaces the first `apps/web` on `main`; it was replayed on top of `main` in small commits, keeps `main`'s Vite 8 / React 19 / TS 7, signs only through `@truce/invoice-lib`, and maps the real `apps/server` responses in `src/lib/api/client.ts`.
+- 2026-11-06, web: visual style changed to the "teal treasury" look the user picked from a reference template (palette and font only; no code or brand copied). Details in `apps/web/TEMPLATE-MAP.md`.
