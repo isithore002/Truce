@@ -28,7 +28,7 @@ Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...
 | # | Do this | Expect |
 |---|---|---|
 | 1 | Home page loads | EXAMPLE DATA banner; no scenario switcher bar (that bar means you are still in mock mode) |
-| 2 | `/setup` -> connect the merchant account | Wallet asks to connect; domain `northlight-design.example` and payout = the signing wallet; "Download truce.json" works |
+| 2 | `/setup` -> connect the merchant account, then press **Check my domain** | Wallet asks to connect; domain `northlight-design.example` and payout = the signing wallet; "Download truce.json" works. The check says **"Your domain is set up."** for the example merchant wallet, and **"Not set up yet."** with the wallet the file lists if you connected another wallet. For your own real domain it reads `https://<domain>/.well-known/truce.json` live (no redirects; a slow host can time out at 3 s) |
 | 3 | `/merchant` -> fill client name, one line item, a due date -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears, with a notice above it. With the example merchant it says **"Your buyer will see PASS"** (10 of 10 checks). With a domain you do not control (for example `acme.com`) or the wrong wallet it says **"Your buyer will see FAIL, so do not send this link yet"**, lists the failing checks and what to change |
 | 4 | Open the link in the buyer profile (`/pay/...`) | Big PASS, ten checks, full payout wallet shown |
 | 5 | Connect the buyer wallet | Chain 1874 is added or switched to |

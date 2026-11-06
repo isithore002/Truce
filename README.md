@@ -28,7 +28,7 @@ Built for ETHGlobal Mumbai 2026, Whitechain **Operate** track. Testnet only. All
 
 | Page | What it does |
 |---|---|
-| `/merchant` | Connect a wallet, generate the `truce.json` to publish, create and sign invoices, see status (awaiting, scheduled, at risk, paid, failed, cancelled), download two accountant files: a CSV with one row per invoice (including `refunded` and `net_received`) and a **ledger** with one row per money movement (issued, payment, refund), each payment and refund with its explorer link. The list refreshes every few seconds and flashes a row when its status changes. Open an invoice to **refund** it, in full or in part (the payout wallet signs; the money goes only to the wallet that paid). An optional field makes a series of separate monthly invoices (not a subscription). For example data, a demo field makes an invoice due in a few minutes. |
+| `/merchant` | Connect a wallet, generate the `truce.json` to publish and check that it is live on your domain, create and sign invoices, see status (awaiting, scheduled, at risk, paid, failed, cancelled), download two accountant files: a CSV with one row per invoice (including `refunded` and `net_received`) and a **ledger** with one row per money movement (issued, payment, refund), each payment and refund with its explorer link. The list refreshes every few seconds and flashes a row when its status changes. Open an invoice to **refund** it, in full or in part (the payout wallet signs; the money goes only to the wallet that paid). An optional field makes a series of separate monthly invoices (not a subscription). For example data, a demo field makes an invoice due in a few minutes. |
 | `/pay/<hash>` | The buyer page: ten plain-language checks and a big PASS or FAIL, the full payout wallet, a payee-changed warning if the merchant's wallets differ from what this browser saw on a previous payment, pay now or on the due date, cancel a scheduled payment. The receipt shows the network fee and who paid it, read from the explorer for that transaction. |
 | `/verify` | Public check, no wallet: paste a link, a hash or the invoice JSON. Shows PASS or FAIL and whether it was paid on chain. A demo button swaps the payout wallet to show the FAIL. |
 
@@ -94,7 +94,7 @@ Limits: this fits only parties who already hold stablecoins, we have no adoption
 ## Tests
 
 - Foundry (49): settle, swapped payout, tampered amount, wrong signer, expiry, double settle, payer lock, fee-on-transfer token, ERC-1271 merchant, pause, golden vectors shared with TypeScript, fuzz and invariants, capped refunds.
-- Library (74), server (177, including a fake-clock scheduler suite, SSRF tests, the refund route, the ledger and the RPC fallback), web (93, plus 9 opt-in smoke tests that run the web client against a live server: `npm run smoke:web`), SDK (4), demo storefront (8).
+- Library (74), server (197, including a fake-clock scheduler suite, SSRF tests, the refund route, the ledger, the RPC fallback and the domain check), web (93, plus 10 opt-in smoke tests that run the web client against a live server: `npm run smoke:web`), SDK (4), demo storefront (8).
 - Live scripts above, each recorded with explorer links.
 
 ## Overlap with other entries
