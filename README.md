@@ -44,7 +44,8 @@ npm run test:all                      # lib, server, web, sdk and Foundry tests
 
 # Demo with no keys and no network: a mock chain and the fictional example merchant
 DEMO_DOMAINS=1 npm run server         # terminal 1: API on http://127.0.0.1:8787 (mock chain)
-npm run dev -w apps/web               # terminal 2: web app on http://localhost:5173
+npm run dev -w apps/web               # terminal 2: web app on http://localhost:5173 (default: scripted mock mode, no server)
+# To use the real API instead, put VITE_API_MODE=server in apps/web/.env.local and restart (open it as localhost:5173)
 npm run start -w @truce/merchant-demo # needs MERCHANT_PK in .env (see below); prints a pay link
 ```
 

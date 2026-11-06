@@ -6,34 +6,45 @@ Deadline: **Sat 2026-11-07 09:00 IST** (aim to submit by 08:00). The autonomous 
 
 Nobody has seen the screens in a real browser with a wallet extension. Do this before recording, and fix or cut whatever misbehaves.
 
+**Use server mode, not the default.** The web app starts in `VITE_API_MODE=mock`: scripted scenarios, a pretend wallet, no server, no chain. Anything recorded that way is not real. Create `apps/web/.env.local` with:
+
+```
+VITE_API_MODE=server
+VITE_API_BASE=http://localhost:8787
+```
+
 Terminal 1 (real testnet; use `CHAIN_MODE=mock` instead if you only want to look):
 ```bash
 CHAIN_MODE=testnet DEMO_DOMAINS=1 npm run server
 ```
-Terminal 2: `npm run dev -w apps/web`, then open http://localhost:5173 in a browser with MetaMask or Rabby.
+Terminal 2: `npm run dev -w apps/web`, then open **http://localhost:5173** (type `localhost`, not `127.0.0.1`: the server's CORS allows exactly that origin) in a browser with MetaMask or Rabby. Restart Vite after editing `.env.local`.
+
+Optional pre-check that needs no browser (mock chain, port 8790): `DEMO_DOMAINS=1 PORT=8790 npm run server`, then `npm run smoke:web`. It runs the web app's own client against the server: create, get, verify, pay now, list, CSV, swapped-payout FAIL, pay on the due date, cancel.
 
 Wallets: the merchant page signs with the **example merchant wallet** `0x19d4...51Dc` (import the MERCHANT_PK key into the wallet), the buyer pays with `0xB17a...a28E` (import PAYER_PK). Use a separate browser profile for each, or switch accounts.
 
 | # | Do this | Expect |
 |---|---|---|
-| 1 | Home page loads | Yellow EXAMPLE DATA banner at the top |
-| 2 | `/merchant` -> Connect wallet (merchant account) | Wallet asks to connect; page shows the signing wallet, the `truce.json` text, the Soul badge "Individual KYC-verified on WhiteBIT (demo data, mocked)" |
-| 3 | Fill nothing (the example is pre-filled) -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears |
-| 4 | Open the link in the buyer profile -> `/pay/...` | Big green PASS, ten checks, full payout wallet shown |
-| 5 | Connect the buyer wallet | Chain 1874 is added or switched to; balance shown |
-| 6 | Pay | One signature prompt (no gas), "Sending the payment", then Paid with an explorer link |
-| 7 | `/verify?hash=...` -> "Demo: show a copy with the payout wallet swapped" | Big red FAIL, the failing checks highlighted |
-| 8 | `/merchant` dashboard | The row shows Paid with a Transaction link; "Download CSV" downloads a file that opens in a spreadsheet |
-| 9 | Create a second invoice with "due in 2 minutes", open it as the buyer, choose "Pay on the due date", sign | "Payment scheduled", collected by itself about 2 minutes later |
-| 10 | Create a third, schedule it, press "Cancel my authorization" | "Authorization cancelled" |
+| 1 | Home page loads | EXAMPLE DATA banner; no scenario switcher bar (that bar means you are still in mock mode) |
+| 2 | `/setup` -> connect the merchant account | Wallet asks to connect; domain `northlight-design.example` and payout = the signing wallet; "Download truce.json" works |
+| 3 | `/merchant` -> fill client name, one line item, a due date -> "Sign and create invoice" | Wallet shows a typed-data signature (no gas); a pay link appears |
+| 4 | Open the link in the buyer profile (`/pay/...`) | Big PASS, ten checks, full payout wallet shown |
+| 5 | Connect the buyer wallet | Chain 1874 is added or switched to |
+| 6 | Pay now | One signature prompt (no gas), progress, then paid with an explorer link |
+| 7 | `/demo` -> build the swapped-payout link and open it | Big FAIL, the failing checks highlighted, Pay disabled |
+| 8 | `/merchant` dashboard | The row shows Paid with a transaction link; "Download CSV" downloads a file that opens in a spreadsheet |
+| 9 | New invoice with **today's date** as the due date (UTC), open as buyer, choose "On the due date", sign | "Scheduled" appears, then the scheduler collects it within seconds. There is no "due in N minutes" field in this UI (see below) |
+| 10 | New invoice with a **future** due date (tomorrow), schedule it, press "Cancel scheduled payment" | Cancelled |
 
-Optional, to see the payee-changed warning: after step 6, add a second wallet to `payoutAddresses` in `fixtures/domains/northlight-design.example.json`, restart the server, set that wallet as the payout wallet on the Merchant page, create a new invoice and open it in the same browser as the buyer.
+The Soul badge ("Individual KYC-verified on WhiteBIT (demo data, mocked)") should appear on example invoices only.
+
+Optional, to see the payee-changed warning: after step 6, add a second wallet to `payoutAddresses` in `fixtures/domains/northlight-design.example.json`, restart the server, set that wallet as the payout wallet on `/setup`, create a new invoice and open it in the same browser as the buyer.
 
 Write down anything that looks wrong. The README already says the click-through is a manual check.
 
 ## 2. Record the video (2 to 4 minutes)
 
-Shot list and wording: `docs/design/E-SUBMISSION.md` section 2. Must show each party (merchant, buyer, relayer, verifier), the swapped-payout FAIL in the app, and the swapped-payout revert (`npm run e2e -- --attack-only` prints it). Say on screen and aloud that the data is **example data** and the due date is **time-compressed**. 720p or higher, your own voice, no speed-up. Keep a spare take of the attack and the payment.
+Shot list and wording: `docs/design/E-SUBMISSION.md` section 2. Must show each party (merchant, buyer, relayer, verifier), the swapped-payout FAIL in the app, and the swapped-payout revert (`npm run e2e -- --attack-only` prints it). Say on screen and aloud that the data is **example data** and the due date is **time-compressed**. 720p or higher, your own voice, no speed-up. Keep a spare take of the attack and the payment. Record in server mode only (step 1).
 
 ## 3. Check before you submit
 

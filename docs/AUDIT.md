@@ -33,7 +33,7 @@ BLOCKED or SKIPPED items: none. The redeploy succeeded first time.
 |---|---|
 | invoice-lib | 74 passed |
 | server | 137 passed at the clean-clone run (143 after the review fixes in section 3) |
-| web | 54 passed |
+| web | 54 passed in the clean clone; **53 passed** after the web app was replaced (see section 9), plus 5 opt-in server-mode smoke tests |
 | sdk | 4 passed |
 | Foundry | 49 passed (fuzz and invariant included) |
 | `tsc --noEmit` + `vite build` | clean in the clone (run from PowerShell; see note) |
@@ -108,3 +108,14 @@ The contract, library, relayer, server, scheduler, refund, cancel and the tests 
 5. Everything is testnet, example data and an unaudited contract. The README says so.
 
 Remaining human steps and times: about 15 minutes for the click-through, about 45 minutes to rehearse and record, about 15 minutes to fill in the ETHGlobal form and select Whitechain.
+
+## 9. Update after the web app was replaced (2026-11-06, later)
+
+`origin/main` received a new `apps/web` from a second contributor (landing page, `/setup`, `/demo`, new `/pay`, `/verify`, `/merchant`; the first web app's pages and tests were removed). Sections 1, 2 and 7 were written for the first web app; read them with these corrections:
+
+- **Tests on the merged tree:** invoice-lib 74, server 143, web 53, SDK 4 pass; the web build is clean. Foundry was not rerun (no contract changes).
+- **Default mode is mock.** The new app uses `VITE_API_MODE=mock` unless told otherwise: pages then use a scripted adapter and never reach the server or chain. The checklist now says to set `VITE_API_MODE=server` and to open `http://localhost:5173` (CORS allows only that origin).
+- **Server mode checked without a browser.** `npm run smoke:web` runs the new app's own HTTP client, response mapping and typed-data seam against a running server and signs as the example merchant and buyer. 5/5 passed on the mock chain: config and health mapping; create (server hash equals the page's hash), get, verify (10 checks, PASS), pay now to PAID, merchant list, CSV, second payment refused; a swapped-payout copy FAILS (`signature_valid`, `payout_in_domain_file`) and is refused at create; a validly signed but unlisted payout FAILS on `payout_in_domain_file` alone; pay on the due date to SCHEDULED_OK with mode `due`, then cancel to CANCELLED. A browser CORS preflight from `http://localhost:5173` passes. Not run against the live testnet through this client.
+- **Design fact worth knowing:** invoice creation and `authorize` check the merchant's signature, not the domain file. A payout the merchant key signed but never listed in `truce.json` shows FAIL and disables Pay in the app, but the API itself would still accept it. The contract pays only the signed payout, so this is the merchant's own choice, not a redirect by a third party.
+- **Demo gap:** the new create form takes a calendar due date (00:00 UTC) only. The first app had a "due in N minutes" field. Without it a time-compressed scheduled-then-collected moment cannot be shown from the UI: a date of today collects within seconds, a future date stays scheduled. The scripts (`npm run e2e:due`) still show it.
+- Still unclicked in a real browser: everything in section 7, now on the new screens.
