@@ -2,8 +2,11 @@ import type { InvoiceRecord, InvoiceStatus } from "../shared/store.js";
 
 /** An unpaid invoice past its expiry reads as EXPIRED (computed on read, nothing is rewritten). */
 export function effectiveStatus(rec: InvoiceRecord, now: number): InvoiceStatus {
-  const expired = BigInt(rec.doc.invoice.expiry) < BigInt(now);
-  return expired && (rec.status === "ISSUED" || rec.status === "SCHEDULED_OK" || rec.status === "AT_RISK" || rec.status === "FAILED") ? "EXPIRED" : rec.status;
+  const past = BigInt(rec.doc.invoice.expiry) < BigInt(now);
+  if (!past) return rec.status;
+  // A scheduled collection that never succeeded is a failed collection, not a quietly expired invoice.
+  if (rec.status === "SCHEDULED_OK" || rec.status === "AT_RISK") return "FAILED";
+  return rec.status === "ISSUED" ? "EXPIRED" : rec.status;
 }
 
 export function summarize(rec: InvoiceRecord, now: number) {

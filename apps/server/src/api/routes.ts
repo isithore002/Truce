@@ -1,9 +1,10 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Address, Hex } from "viem";
-import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc } from "@truce/invoice-lib";
+import { invoiceHash, parseInvoiceDoc, recoverMerchant, toWire, verifyInvoiceDoc, verifyReceiveAuthorization, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib";
 import { RateLimiter } from "../chain/limits.js";
 import type { AppContext } from "./app.js";
-import { ApiError } from "./errors.js";
+import { ApiError, type ApiErrorCode } from "./errors.js";
+import type { InvoiceRecord } from "../shared/store.js";
 import { ChainError } from "../chain/errors.js";
 import { invoicesToCsv } from "./csv.js";
 import { AddressParam, AuthorizeBody, HashParam, VerifyQuery } from "./schemas.js";
@@ -126,16 +127,13 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   // ---- pay now: the buyer signed once; the relayer submits and pays the gas ----
-  const settling = new Set<string>();
+  const settling = ctx.inFlight;
 
   app.post("/api/invoices/:hash/authorize", async (req, reply) => {
     const { hash } = HashParam.parse(req.params);
     const body = AuthorizeBody.parse(req.body);
     const rec = await store.get(hash);
     if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
-    if (body.mode === "due") {
-      throw new ApiError("NOT_IMPLEMENTED", "Paying on the due date is not available yet. Please pay now instead.");
-    }
     const status = effectiveStatus(rec, ctx.now());
     if (status === "PAID") throw new ApiError("ALREADY_PAID", "This invoice has already been paid.");
     if (status === "EXPIRED") throw new ApiError("EXPIRED", "This invoice has expired and can no longer be paid.", undefined, 410);
@@ -144,6 +142,7 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     const parsed = parseInvoiceDoc(rec.doc);
     if (!parsed.ok) throw new ApiError("INTERNAL", "The stored invoice is damaged.");
     const auth = { mode: body.mode, from: body.from, validAfter: BigInt(body.validAfter), validBefore: BigInt(body.validBefore), v: body.v, r: body.r as Hex, s: body.s as Hex };
+    if (body.mode === "due") return scheduleDue(rec, parsed.value, auth, reply);
 
     settling.add(hash);
     await store.update(hash, (r) => {
@@ -191,6 +190,58 @@ export function registerRoutes(app: FastifyInstance, ctx: AppContext) {
     if (waited === "timeout") return reply.status(202).send({ status: "PENDING" });
     return reply.status(waited.status === "PAID" ? 200 : 202).send(waited);
   });
+
+  // Try a scheduled collection now (rate limited). It can only act on an authorization the buyer already signed.
+  const collectLimiter = new RateLimiter(20, 60_000);
+  app.post("/api/invoices/:hash/collect", async (req, reply) => {
+    collectLimiter.check(req.ip);
+    const { hash } = HashParam.parse(req.params);
+    if (!ctx.collectNow) throw new ApiError("NOT_IMPLEMENTED", "Collection is not available on this server.");
+    const rec = await store.get(hash);
+    if (!rec) throw new ApiError("NOT_FOUND", "No invoice with this hash.");
+    const outcome = await ctx.collectNow(hash);
+    if (outcome === "not_scheduled") throw new ApiError("INVALID_DOCUMENT", "This invoice has no scheduled payment to collect.");
+    return reply.status(200).send({ result: outcome, status: effectiveStatus((await store.get(hash))!, ctx.now()) });
+  });
+
+  /** Pay on the due date: check the authorization and the buyer's balance now, then store it for the scheduler. */
+  async function scheduleDue(rec: InvoiceRecord, doc: InvoiceDoc, auth: BuyerAuth, reply: FastifyReply) {
+    const inv = doc.invoice;
+    const now = ctx.now();
+    if (inv.dueDate === 0n) throw new ApiError("INVALID_DOCUMENT", "This invoice is due on receipt, so there is no due date to wait for. Please pay now.");
+    if (BigInt(now) >= inv.dueDate) throw new ApiError("INVALID_DOCUMENT", "The due date has already passed. Please pay now instead.");
+    if (auth.validAfter !== inv.dueDate || auth.validBefore !== inv.expiry) {
+      throw new ApiError("AUTH_INVALID", "The authorization must start on the due date and end when the invoice expires.");
+    }
+    if (inv.payer !== "0x0000000000000000000000000000000000000000" && inv.payer.toLowerCase() !== auth.from.toLowerCase()) {
+      throw new ApiError("WRONG_PAYER", "This invoice can only be paid by a different wallet.");
+    }
+    if (rec.status === "SCHEDULED_OK" || rec.status === "AT_RISK") {
+      throw new ApiError("DUPLICATE", "This invoice is already scheduled. Cancel the existing authorization first.");
+    }
+    const tokenCtx = { chainId: chain.config.chainId, token: inv.token };
+    const ok = await verifyReceiveAuthorization(auth, { settler: chain.config.settler, invoice: inv, invoiceHash: rec.hash }, tokenCtx);
+    if (!ok) throw new ApiError("AUTH_INVALID", "The payment authorization is not valid (wrong signature, amount or recipient).");
+
+    // Snapshot, not a lock: the balance can still change before the due date.
+    const health = await chain.health(doc, auth).catch((e) => {
+      throw e instanceof ChainError ? new ApiError(e.code as ApiErrorCode, e.message) : e;
+    });
+    if (health.reason === "LOW_BALANCE") {
+      throw new ApiError("INSUFFICIENT_BALANCE", "Your balance is lower than this invoice right now, so a scheduled payment would fail. Add funds, then schedule again.", { balance: health.balance.toString() });
+    }
+    if (health.reason === "BLOCKED") throw new ApiError("AUTH_INVALID", "This wallet is blocked by the token and cannot pay.");
+    if (health.reason === "AUTH_CANCELLED") throw new ApiError("AUTH_INVALID", "This authorization was already used or cancelled.");
+
+    await store.update(rec.hash, (r) => {
+      r.auth = { mode: "due", from: auth.from, validAfter: auth.validAfter.toString(), validBefore: auth.validBefore.toString(), v: auth.v, r: auth.r, s: auth.s };
+      r.status = "SCHEDULED_OK";
+      r.health = { reason: health.reason, checkedAt: now };
+      r.schedule = { attempts: 0, nextAttemptAt: 0 };
+      r.events.push({ at: now, type: "scheduled", detail: auth.from });
+    });
+    return reply.status(200).send({ status: "SCHEDULED_OK", collectAt: auth.validAfter.toString() });
+  }
 
   app.get("/healthz", async (_req, reply) => {
     try {

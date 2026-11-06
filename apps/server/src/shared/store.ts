@@ -34,6 +34,8 @@ export interface InvoiceRecord {
   auth?: StoredAuth;
   payment?: { payer: Address; paidAt: number; txHash?: Hex };
   health?: { reason: string; checkedAt: number };
+  /** Due-date collection bookkeeping (survives restarts). */
+  schedule?: { attempts: number; nextAttemptAt: number };
   /** Audit trail, oldest first. */
   events: InvoiceEvent[];
   createdAt: number;

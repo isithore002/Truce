@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { DomainResolver } from "@truce/invoice-lib";
+import type { Hex } from "viem";
 import type { ChainModule } from "../chain/types.js";
 import type { Store } from "../shared/store.js";
 import { errorBody, errorHandler } from "./errors.js";
@@ -18,12 +19,18 @@ export interface AppDeps {
   webOrigin?: string;
   /** How long /authorize waits for confirmation before answering 202 PENDING. */
   authorizeWaitMs?: number;
+  /** Hashes being settled right now; share it with the Scheduler so nothing is sent twice at once. */
+  inFlight?: Set<string>;
+  /** Lets the merchant trigger a due-date collection immediately (Scheduler.collectNow). */
+  collectNow?: (hash: Hex) => Promise<string>;
   /** True when fictional *.example merchant domains are served from local fixtures. */
   exampleMode?: boolean;
   logger?: boolean;
 }
 
-export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs">> {}
+export interface AppContext extends Required<Pick<AppDeps, "chain" | "store" | "resolveDomain" | "now" | "publicBaseUrl" | "exampleMode" | "authorizeWaitMs" | "inFlight">> {
+  collectNow?: (hash: Hex) => Promise<string>;
+}
 
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 64 * 1024, trustProxy: false });
@@ -35,6 +42,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     publicBaseUrl: (deps.publicBaseUrl ?? "http://localhost:5173").replace(/\/$/, ""),
     exampleMode: deps.exampleMode ?? false,
     authorizeWaitMs: deps.authorizeWaitMs ?? 15_000,
+    inFlight: deps.inFlight ?? new Set<string>(),
+    collectNow: deps.collectNow,
   };
   const origin = deps.webOrigin ?? "http://localhost:5173";
 

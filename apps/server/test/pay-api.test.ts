@@ -96,12 +96,11 @@ describe("POST /api/invoices/:hash/authorize (pay now)", () => {
     expect(res.json().error.code).toBe("WRONG_PAYER");
   });
 
-  it("answers 410 for an expired invoice, 404 for an unknown one, 400 for a bad body, 501 for due mode", async () => {
+  it("answers 410 for an expired invoice, 404 for an unknown one, 400 for a bad body", async () => {
     const { app, set } = setup();
     const doc = await makeDoc();
     const hash = await create(app, doc);
     const auth = await makeAuth(doc);
-    expect((await authorize(app, hash, await makeAuth(doc, "due"))).statusCode).toBe(501);
     expect((await authorize(app, hash, { ...wire(auth), v: 5 })).statusCode).toBe(400);
     expect((await authorize(app, `0x${"cd".repeat(32)}`, auth)).statusCode).toBe(404);
     set(Number(doc.invoice.expiry) + 1);

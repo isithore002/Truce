@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { buildApp } from "./api/app.js";
 import { createChain } from "./chain/index.js";
 import { createDomainResolver } from "./domain/resolver.js";
+import { Scheduler } from "./scheduler.js";
 import { JsonStore } from "./shared/store.js";
 
 const env = process.env;
@@ -17,9 +18,14 @@ const demo = env.DEMO_DOMAINS === "1";
 const storePath = env.STORE_PATH || join(fileURLToPath(new URL("../data/", import.meta.url)), "store.json");
 
 const chain = createChain(env);
+const store = new JsonStore(storePath);
+const inFlight = new Set<string>(); // shared, so an invoice is never settled by the API and the scheduler at once
+const scheduler = new Scheduler({ store, chain, inFlight, now: () => Math.floor(Date.now() / 1000), log: (m) => app.log.info(m) });
 const app = buildApp({
   chain,
-  store: new JsonStore(storePath),
+  store,
+  inFlight,
+  collectNow: (hash) => scheduler.collectNow(hash),
   resolveDomain: createDomainResolver({ demoDomains: demo }),
   publicBaseUrl: env.PUBLIC_BASE_URL || "http://localhost:5173",
   webOrigin: env.WEB_ORIGIN || "http://localhost:5173",
@@ -28,6 +34,7 @@ const app = buildApp({
 });
 
 chain.startScheduler();
+scheduler.start();
 app.listen({ port, host }).then(
   () => app.log.info(`Truce API on http://${host}:${port} (chain mode: ${env.CHAIN_MODE ?? "mock"}, example merchants: ${demo ? "on" : "off"})`),
   (err) => {
