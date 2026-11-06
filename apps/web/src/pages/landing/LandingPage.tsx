@@ -1,10 +1,12 @@
 import '../../styles/landing.css';
+import '../../styles/landing-anim.css';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { config } from '../../lib/config';
 import { useCountUp, useReveal, useScrollProgress } from '../../lib/motion';
 import { FAQ, Faq } from './Faq';
+import { LiveCheck, PaymentFlow } from './Animated';
 import { DashboardFrame, PhoneMock } from './Mockups';
 
 /*
@@ -169,6 +171,17 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="l-live" aria-labelledby="live-h">
+        <div className="wrap">
+          <div className="l-sec-head" data-reveal>
+            <span className="l-eyebrow"><i aria-hidden="true" />Live check</span>
+            <h2 id="live-h">Watch one invoice pass, then fail when the payout wallet is swapped.</h2>
+            <p>The same ten checks run on every pay page. Change one wallet after the merchant signed, and the Pay button never wakes up.</p>
+          </div>
+          <div data-reveal data-reveal-delay="120"><LiveCheck /></div>
+        </div>
+      </section>
+
       <section className="l-features">
         <div className="wrap">
           <span className="l-eyebrow" data-reveal><i aria-hidden="true" />How it works</span>
@@ -191,6 +204,17 @@ export function LandingPage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="l-flow" aria-labelledby="flow-h">
+        <div className="wrap">
+          <div className="l-sec-head" data-reveal>
+            <span className="l-eyebrow l-eyebrow--inv"><i aria-hidden="true" />Where a payment travels</span>
+            <h2 id="flow-h">From the merchant's signature to the payout wallet, checked twice.</h2>
+            <p>Once in the buyer's browser against the merchant's own domain, and again on chain by InvoiceSettler.</p>
+          </div>
+          <div data-reveal data-reveal-delay="120"><PaymentFlow /></div>
         </div>
       </section>
 

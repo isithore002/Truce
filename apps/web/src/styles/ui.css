@@ -161,3 +161,4 @@ a.card:hover { transform: translateY(-2px); border-color: var(--p-line-strong); 
 .scenario-bar select { background: var(--p-inv-surface); color: var(--p-inv-ink); border: 1px solid rgba(238, 236, 234, .2); border-radius: var(--r-sm); height: 32px; padding: 0 8px; }
 .scenario-bar a { color: var(--p-inv-ink); }
 .nav__progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--p-gold); transform-origin: left; transform: scaleX(0); pointer-events: none; }
+.logo svg { flex: none; }
