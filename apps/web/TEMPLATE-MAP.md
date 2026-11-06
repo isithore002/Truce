@@ -40,3 +40,8 @@ The template's own name, logo, wordmark and financial claims are not used. No `.
 | Column footer + disclaimer + giant wordmark | `LimitsFooter`, landing `l-wordmark` | adapt: limits line kept on every page |
 | Dashboard sidebar + overview | `pages/MerchantPage.tsx` | adapt: figures computed from the merchant's own invoices |
 | Pricing, resources, partner banks, LP content | none | remove: not Truce features |
+
+## Third-party marks
+- `public/brand/whitechain-mark.svg`: Whitechain's own icon, downloaded unmodified from https://whitechain.io/icon.svg on 2026-11-06.
+  Shown in 3D on the landing page ("Built on Whitechain") only to credit the network Truce runs on. The mark belongs to Whitechain;
+  no Whitechain endorsement is claimed.

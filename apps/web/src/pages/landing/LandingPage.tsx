@@ -9,6 +9,7 @@ import { FAQ, Faq } from './Faq';
 import { LiveCheck, PaymentFlow } from './Animated';
 import { DashboardFrame, PhoneMock } from './Mockups';
 import { TamperLab } from './TamperLab';
+import { WhitechainMark } from './WhitechainMark';
 
 /*
   Layout follows the "teal treasury" reference template the user chose: hero, product UI in a device frame, stat row,
@@ -228,6 +229,10 @@ export function LandingPage() {
           </div>
           <div data-reveal data-reveal-delay="120"><PaymentFlow /></div>
         </div>
+      </section>
+
+      <section className="l-wc" aria-label="Built on Whitechain">
+        <div className="wrap" data-reveal><WhitechainMark /></div>
       </section>
 
       <section className="l-try">

@@ -17,7 +17,7 @@ import { formatUsdt } from '../../lib/format';
 const DOMAIN = 'northlight-design.example';
 const HONEST_PAYOUT = '0x3b9c4d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c' as Address;
 const ATTACKER_PAYOUT = '0xbadc0de5a1e4f00d9c2e7b3a8d1f6c4e0b5a9d37' as Address;
-const SETTLER = '0xb1e1c081d5fb009d8f908b220d902e9f98dfbfe7' as Address;
+const SETTLER = '0xcbe41b98d2333a1bd92d51fbb6fe668c5170ff9d' as Address; // deployments/whitechain-sepolia.json
 const CTX = { chainId: 1874, verifyingContract: SETTLER };
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
