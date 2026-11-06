@@ -22,6 +22,13 @@
 - `reference/WHITECHAIN-SPONSOR-ANALYSIS.md`: earlier sponsor analysis (partly superseded)
 - `reference/ETHGLOBAL-RULES.md`: event rules (deadline, team, AI disclosure)
 
+## Submission and review
+- `SUBMISSION-CHECKLIST.md`: the human steps (browser click-through, video, submit) with expected results
+- `VIDEO-SCRIPT.md`: shot list, narration and recovery notes for the 2 to 4 minute video
+- `AUDIT.md`: what was verified, on chain and in tests, and what was not
+- `AUTONOMOUS-LOG.md`: log of the autonomous build run
+- `design/G-ERP-STYLE-VIEW.md`: the architecture read as an accounts-receivable module (not an ERP)
+
 ## Other
 - `AI-USE.md`: how AI was used (required disclosure)
 - `archive/SPEC-v1-stealth-SUPERSEDED.md`: the earlier stealth-first design, kept for history

@@ -152,3 +152,11 @@ The ledger has only money entries, uses illustrative account names, and is not a
 When an invoice is created, the screen now runs the same check the buyer's page runs and shows "Your buyer will see PASS" or "Your buyer will see FAIL", with the failing checks and what to change. It was added because the first real browser run showed a merchant could create and share an invoice for a domain they did not control without being told it would fail. It reads the server's verify result and shows nothing the server did not say.
 
 Evidence: 7 unit tests for the "what to change" advice (including that an unreadable domain file gives one hint, not three), and a smoke test against the server that creates a valid and an unlisted-payout invoice and checks PASS with no hints, and FAIL with the payout hint (9 of 9 smoke tests pass on the mock chain). Not verified: the notice itself was not seen in a browser. For a series it checks the first invoice only.
+
+### 10d. Read-only RPC fallback
+
+The chain module's reads (simulation, receipts, balances, health) now try the primary RPC and then the documented backup; sending stays on the primary only. It was added because the public RPC was slow at times (one health read took 9 seconds). A transaction offered to a second node after a timed-out send could be reported as failed even though it went through, which is why sends do not fail over.
+
+Evidence: 5 tests, 3 of which run the real client against two local HTTP servers acting as nodes (primary down: answered from the backup after the primary was tried; primary healthy: the backup is never contacted; no backup configured: fails as before), and 2 for the setting. **Live:** a temporary server with its primary RPC set to a dead port still returned the real chain id, block number and relayer balance in 2.3 seconds through the backup. Not verified: a payment while the primary is down (by design, sends do not fail over); behaviour of the backup under load.
+
+Final counts at this point: server 177, web 93 (plus 9 opt-in smoke tests, 9 of 9 on the mock chain), library 74, SDK 4, storefront 8, Foundry 49 (not rerun).
