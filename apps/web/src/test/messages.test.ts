@@ -39,3 +39,13 @@ describe('messages', () => {
     expect(all).not.toMatch(/guaranteed|verified business|fraud-proof|needs Whitechain/i);
   });
 });
+
+describe('event labels', () => {
+  it('has a plain label for every event type apps/server writes', async () => {
+    const { EVENT_LABELS, eventLabel } = await import('../lib/messages');
+    for (const t of ['created', 'authorized', 'pending', 'paid', 'paid_onchain', 'settle_failed', 'scheduled', 'collect_retry', 'collect_failed', 'cancel_pending', 'cancelled']) {
+      expect(EVENT_LABELS[t]?.label, t).toBeTruthy();
+    }
+    expect(eventLabel('something_new').label).toBe('Something new');
+  });
+});

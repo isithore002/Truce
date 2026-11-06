@@ -121,3 +121,27 @@ export function errorMessage(code: string | undefined, fallback?: string): strin
   if (code && code in ERROR_MESSAGES) return ERROR_MESSAGES[code as ErrorCode];
   return fallback || ERROR_MESSAGES.INTERNAL;
 }
+
+/** Audit event type (apps/server events and the mock) -> plain label and tone. Unknown types fall back to a readable form. */
+export const EVENT_LABELS: Record<string, { label: string; tone?: 'ok' | 'bad' | 'warn' | 'info' }> = {
+  created: { label: 'Invoice created' },
+  verified: { label: 'Checked' },
+  authorized: { label: 'Buyer signed' },
+  pending: { label: 'Payment sent, waiting for confirmation', tone: 'info' },
+  paid: { label: 'Paid', tone: 'ok' },
+  paid_onchain: { label: 'Paid (seen on chain)', tone: 'ok' },
+  settle_failed: { label: 'Payment failed', tone: 'bad' },
+  scheduled: { label: 'Scheduled for the due date', tone: 'info' },
+  at_risk: { label: 'At risk', tone: 'warn' },
+  collect_retry: { label: 'Collection will retry', tone: 'warn' },
+  collect_failed: { label: 'Collection failed', tone: 'bad' },
+  failed: { label: 'Collection failed', tone: 'bad' },
+  cancel_pending: { label: 'Cancellation sent', tone: 'info' },
+  cancelled: { label: 'Cancelled' },
+  expired: { label: 'Expired' },
+  refunded: { label: 'Refunded', tone: 'info' },
+};
+
+export function eventLabel(type: string) {
+  return EVENT_LABELS[type] ?? { label: type.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) };
+}

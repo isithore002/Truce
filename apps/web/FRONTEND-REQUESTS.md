@@ -10,8 +10,8 @@ where the real shape differs from what the UI uses, `src/lib/api/client.ts` (`fr
 | R3 | `apps/server` | health, payment, mode on `GET /api/invoices/:hash` | **done**: `payment {payer, paidAt, txHash}` -> `tx`; `health {reason, checkedAt}` -> `ok = reason === "NONE"`; `schedule` present -> mode `due`. No refund overlay yet (refunds are contract-only, by scope) |
 | R4 | `apps/server` | audit trail | **done**: `events[]` with unix `at`; mapped to ISO |
 | R5 | shared | `pin` in verify response | **closed**: pinning is browser-side; the server returns `domainFile` and `onchain` instead, typed in `VerifyResponse` |
-| R6 | `apps/server` | merchant list item | **done**: `{ items: [...] }`; mapped (no `healthReason` per row, so the dashboard shows the status badge without reason text) |
+| R6 | `apps/server` | merchant list item | **done**: `{ items: [...] }` mapped, including `healthReason` (shown under At risk / Failed) |
 | R7 | `apps/server` | `/healthz` | **done**: `{ ok, mode, rpc.blockNumber, relayer.wbtBalance }` mapped. There are no "last events" on the server; the ops panel shows "No events yet" |
 | R8 | shared | check id `document_valid` | **done**: the library lists all ten ids; the web app re-exports `CHECK_IDS` from it |
 | R9 | shared | `docs/design/*` | open: still referenced by the brief; flows follow `SPEC.md`, `ARCHITECTURE.md`, `INTERFACES.md` |
-| R10 | `apps/server` | `POST /api/invoices/:hash/cancel` | **open**: route not built. Due-date mode returns `NOT_IMPLEMENTED`. Both sit behind `VITE_FEATURE_DUE_DATE` (off), so the default UI never calls them |
+| R10 | `apps/server` | `POST /api/invoices/:hash/cancel`, due-date authorize, health | **done** (server T12, T13, T24, T25): due-date mode, cancel and the summary `healthReason` are mapped; `VITE_FEATURE_DUE_DATE` now defaults on |

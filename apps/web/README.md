@@ -34,7 +34,7 @@ Calls `apps/server` over HTTP (routes in `docs/INTERFACES.md` section 6) and an 
 The wallet button switches to, or adds, Whitechain Sepolia from viem's built-in `whitechainSepolia` definition.
 Start the API first: `npm run server` from the repo root (mock chain; add `DEMO_DOMAINS=1` to serve the fictional `*.example` merchants).
 `src/lib/api/client.ts` maps the server's real response shapes (`serverTypes.ts`) onto the UI types. `FRONTEND-REQUESTS.md` lists what was mapped
-and what is still open: the `/cancel` route and due-date mode are not on the server yet, so they stay behind `VITE_FEATURE_DUE_DATE`.
+and what is still open: due-date mode and `/cancel` are on the server now and on by default here.
 Checked on 2026-11-06 against `apps/server` in mock chain mode: create (server hash equals our hash), get, list, verify by hash,
 verify a tampered copy (FAIL on signature and payout), CSV and `/healthz`. **Not yet checked: paying with a real browser wallet on chain 1874.**
 
@@ -43,8 +43,8 @@ verify a tampered copy (FAIL on signature and payout), CSV and `/healthz`. **Not
 |---|---|---|
 | `VITE_DEMO_TOOLS` | on in mock, off in server | `/demo` (tampered links, relayer status) and the scenario switcher |
 | `VITE_EXAMPLE_MODE` | off | forces the EXAMPLE DATA banner (it also shows whenever a document has `details.example` or `/api/config` says so) |
-| `VITE_FEATURE_DUE_DATE` | off | "Pay on the due date", scheduled / at-risk / failed panels, "Cancel scheduled payment" |
-| `VITE_FEATURE_SOUL_BADGE` | off | the mocked badge: "Individual KYC-verified on WhiteBIT (demo data, mocked)" |
+| `VITE_FEATURE_DUE_DATE` | on (set `0` to hide) | "Pay on the due date", scheduled / at-risk / failed panels, "Cancel scheduled payment" |
+| `VITE_FEATURE_SOUL_BADGE` | on (set `0` to hide) | the mocked badge, on example invoices only: "Individual KYC-verified on WhiteBIT (demo data, mocked)" |
 
 ## Pages
 | Route | Who | What |

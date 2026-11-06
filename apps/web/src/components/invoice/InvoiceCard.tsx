@@ -31,7 +31,7 @@ export function InvoiceCard({ doc, status, overlay, payoutBad, signerBad }: { do
           <div className="stack stack--sm">
             <span className="label">Amount due</span>
             <AmountUsdt value={inv.amount} size="lg" />
-            {config.features.soulBadge && (
+            {config.features.soulBadge && doc.details.example && (
               <span className="badge badge--info" style={{ alignSelf: 'flex-start' }}>
                 <Icon name="shield" />
                 Individual KYC-verified on WhiteBIT (demo data, mocked)

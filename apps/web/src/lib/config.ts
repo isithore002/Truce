@@ -13,6 +13,8 @@ export interface AppConfig {
 type Env = Partial<Record<string, string | boolean | undefined>>;
 
 const on = (v: string | boolean | undefined) => v === true || v === '1' || v === 'true' || v === 'on';
+/** Unset or empty means the default; anything else is read with on(). */
+const flag = (v: string | boolean | undefined, dflt: boolean) => (v === undefined || v === '' ? dflt : on(v));
 
 /** Pure so it can be tested; `config` below reads Vite's env once. */
 export function parseConfig(env: Env): AppConfig {
@@ -23,7 +25,8 @@ export function parseConfig(env: Env): AppConfig {
     // demo tools default on in mock mode, off in server mode
     demoTools: env.VITE_DEMO_TOOLS === undefined || env.VITE_DEMO_TOOLS === '' ? mode !== 'server' : on(env.VITE_DEMO_TOOLS),
     exampleMode: on(env.VITE_EXAMPLE_MODE),
-    features: { dueDate: on(env.VITE_FEATURE_DUE_DATE), soulBadge: on(env.VITE_FEATURE_SOUL_BADGE) },
+    // both are built end to end (server routes T12, T13, T24, T25); set =0 to hide them. The Soul badge only shows on example invoices.
+    features: { dueDate: flag(env.VITE_FEATURE_DUE_DATE, true), soulBadge: flag(env.VITE_FEATURE_SOUL_BADGE, true) },
   };
 }
 

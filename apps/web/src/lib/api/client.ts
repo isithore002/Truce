@@ -69,7 +69,7 @@ export const fromServer = {
   }),
   summary: (s: ServerSummary): InvoiceSummary => ({
     hash: s.hash, invoiceId: s.invoiceId, clientName: s.clientName, amount: s.amount, dueDate: s.dueDate, status: s.status,
-    txHash: s.txHash, paidAt: iso(s.paidAt), example: s.example,
+    txHash: s.txHash, paidAt: iso(s.paidAt), example: s.example, healthReason: s.healthReason as HealthReason | undefined,
   }),
   healthz: (h: ServerHealthz): Healthz => ({
     ok: h.ok, chainMode: h.mode, block: h.rpc?.blockNumber, relayerBalanceWei: h.relayer?.wbtBalance,

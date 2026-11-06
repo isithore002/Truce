@@ -40,6 +40,7 @@ export interface ServerSummary {
   dueDate: string;
   expiry: string;
   status: Status;
+  healthReason?: string;
   txHash?: Hex;
   paidAt?: number;
   createdAt: number;
@@ -48,7 +49,8 @@ export interface ServerSummary {
 
 /** POST /authorize: 200 { status: "PAID", txHash } or 202 { status: "PENDING", txHash? } */
 export interface ServerAuthorize {
-  status: 'PAID' | 'PENDING';
+  status: 'PAID' | 'PENDING' | 'SCHEDULED_OK';
+  collectAt?: string;
   txHash?: Hex;
 }
 
