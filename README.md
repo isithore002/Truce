@@ -32,7 +32,7 @@ Built for ETHGlobal Mumbai 2026, Whitechain **Operate** track. Testnet only. All
 | `/pay/<hash>` | The buyer page: ten plain-language checks and a big PASS or FAIL, the full payout wallet, a payee-changed warning if the merchant's wallets differ from what this browser saw on a previous payment, pay now or on the due date, cancel a scheduled payment. The receipt shows the network fee and who paid it, read from the explorer for that transaction. |
 | `/verify` | Public check, no wallet: paste a link, a hash or the invoice JSON. Shows PASS or FAIL and whether it was paid on chain. A demo button swaps the payout wallet to show the FAIL. |
 
-SDK for a merchant app (`sdk/`): `createInvoice({ apiBase, signer, domain, merchantName, clientName, lineItems })` returns `{ link, hash }`. The example app [examples/merchant-demo/invoice.ts](examples/merchant-demo/invoice.ts) needs **10 lines** of integration code (counted by `npm run count:sdk-lines`; the limit we set is 20). A visible version of the same integration is the fictional studio's website, [examples/merchant-demo/shop.ts](examples/merchant-demo/shop.ts): an "Invoice me" button calls its server, which creates a signed Truce invoice in **9 lines** and returns the pay link (`npm run shop -w @truce/merchant-demo`, then open http://127.0.0.1:8800).
+SDK for a merchant app ([sdk/README.md](sdk/README.md)): `createInvoice({ apiBase, signer, domain, merchantName, clientName, lineItems })` returns `{ link, hash }`. The example app [examples/merchant-demo/invoice.ts](examples/merchant-demo/invoice.ts) needs **10 lines** of integration code (counted by `npm run count:sdk-lines`; the limit we set is 20). A visible version of the same integration is the fictional studio's website, [examples/merchant-demo/shop.ts](examples/merchant-demo/shop.ts): an "Invoice me" button calls its server, which creates a signed Truce invoice in **9 lines** and returns the pay link (`npm run shop -w @truce/merchant-demo`, then open http://127.0.0.1:8800).
 
 ## Run it
 
@@ -84,6 +84,12 @@ The parts line up with the usual ERP-style layers: master data (merchant setup, 
 ## Why on chain
 
 The domain file and the PASS/FAIL check are for the buyer's eyes. They do not help if the buyer is rushed, the page is spoofed, or the server is wrong. The contract enforces the payee from the merchant's signature at the moment money moves, whoever submits the transaction. It also settles each invoice once, and anyone can read `payments(hash)` to confirm a payment without trusting our server. A payment page alone cannot show that.
+
+### Why a stablecoin on chain, and not a bank transfer
+
+For a buyer and a merchant who already hold USDT (crypto-native companies, DAOs and the agencies that bill them), a bank transfer means converting out and back, waiting for banking hours, and trusting a payee check that only the banks see. Settling in the USDT they hold takes one signature and no gas for the buyer, and both sides can check the payment against a public record. The payee rule is also enforced by code when the money moves, not by a process around it. A due-date collection is a signed authorization the buyer can cancel on chain.
+
+Limits: this fits only parties who already hold stablecoins, we have no adoption data, and Truce does not replace bank rails. For buyers without stablecoins a bank transfer is the better choice.
 
 ## Tests
 
