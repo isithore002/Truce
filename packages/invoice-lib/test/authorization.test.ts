@@ -114,3 +114,29 @@ describe("splitSignature", () => {
     expect(concat([r, s, v === 27 ? "0x1b" : "0x1c"])).toBe(sig);
   });
 });
+
+describe("refund authorization", () => {
+  it("builds the nonce from the invoice hash and the amount refunded so far", async () => {
+    const { refundNonce } = await import("../src/authorization.js");
+    const h = ("0x" + "11".repeat(32)) as `0x${string}`;
+    expect(refundNonce(h, 0n)).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(refundNonce(h, 0n)).not.toBe(refundNonce(h, 1n));
+    expect(refundNonce(h, 5n)).toBe(refundNonce(h, 5n));
+  });
+  it("signs a receive authorization to the settler for the refund amount", async () => {
+    const { signRefundAuthorization, refundNonce, receiveAuthorizationTypedData } = await import("../src/authorization.js");
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const { recoverTypedDataAddress } = await import("viem");
+    const acct = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+    const nonce = refundNonce(("0x" + "22".repeat(32)) as `0x${string}`, 0n);
+    const settler = "0x0000000000000000000000000000000000001234" as const;
+    const tctx = { chainId: 1874, token: "0xcedfB56113143d55b2358b8CFbB0dEB5Ad2f55a7" as const };
+    const a = await signRefundAuthorization(acct, { settler, amount: 5_000n, nonce, validBefore: 2_000_000_000n }, tctx);
+    expect(a.from).toBe(acct.address);
+    expect([27, 28]).toContain(a.v);
+    // Same shape as a payment authorization, so the token accepts it the same way.
+    const typed = receiveAuthorizationTypedData({ from: acct.address, settler, invoice: { amount: 5_000n, dueDate: 0n, expiry: 2_000_000_000n }, invoiceHash: nonce, mode: "now" }, tctx);
+    const sig = (`0x${a.r.slice(2)}${a.s.slice(2)}${a.v.toString(16)}`) as `0x${string}`;
+    expect(await recoverTypedDataAddress({ ...typed, signature: sig })).toBe(acct.address);
+  });
+});

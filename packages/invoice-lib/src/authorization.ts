@@ -1,4 +1,4 @@
-import { parseSignature, type Address, type Hex, type LocalAccount } from "viem";
+import { encodeAbiParameters, keccak256, parseSignature, type Address, type Hex, type LocalAccount } from "viem";
 import type { Invoice } from "./types.js";
 
 /** Track USDT on Whitechain Sepolia (6 decimals, EIP-1967 proxy, EIP-3009). */
@@ -118,4 +118,20 @@ export async function signCancelAuthorization(
   ctx: TokenContext,
 ): Promise<{ v: number; r: Hex; s: Hex }> {
   return splitSignature(await account.signTypedData(cancelAuthorizationTypedData({ authorizer: account.address, nonce }, ctx)));
+}
+
+/** The EIP-3009 nonce the payout wallet must sign for the next refund (matches InvoiceSettler.refundNonce). */
+export function refundNonce(invoiceHash: Hex, refundedSoFar: bigint): Hex {
+  return keccak256(encodeAbiParameters([{ type: "string" }, { type: "bytes32" }, { type: "uint256" }], ["REFUND", invoiceHash, refundedSoFar]));
+}
+
+/** A refund is the payout wallet's EIP-3009 authorization to the settler, valued at the refund amount. */
+export async function signRefundAuthorization(
+  account: Pick<LocalAccount, "address" | "signTypedData">,
+  params: { settler: Address; amount: bigint; nonce: Hex; validAfter?: bigint; validBefore: bigint },
+  ctx: TokenContext,
+) {
+  const message = { from: account.address, to: params.settler, value: params.amount, validAfter: params.validAfter ?? 0n, validBefore: params.validBefore, nonce: params.nonce };
+  const sig = splitSignature(await account.signTypedData({ domain: tokenDomain(ctx), types: RECEIVE_AUTHORIZATION_TYPES, primaryType: "ReceiveWithAuthorization", message }));
+  return { from: account.address, validAfter: message.validAfter, validBefore: message.validBefore, ...sig };
 }
