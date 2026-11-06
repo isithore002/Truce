@@ -8,7 +8,7 @@ import {
   type LocalAccount,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import type { BuyerAuth, InvoiceDoc } from "@truce/invoice-lib";
+import { invoiceHash, type BuyerAuth, type InvoiceDoc } from "@truce/invoice-lib";
 import { settlerAbi, type ChainConfig } from "./config.js";
 import { ChainError, mapChainError } from "./errors.js";
 import { RateLimiter, RelayerBudget } from "./limits.js";
@@ -39,6 +39,27 @@ export interface ViemChainDeps {
   limiter?: RateLimiter;
 }
 
+/** The slice of the track USDT this module reads and calls (6 decimals, EIP-3009, blocklist). */
+const tokenAbi = [
+  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "authorizationState", stateMutability: "view", inputs: [{ name: "authorizer", type: "address" }, { name: "nonce", type: "bytes32" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "isBlocked", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "bool" }] },
+  {
+    type: "function",
+    name: "cancelAuthorization",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "authorizer", type: "address" },
+      { name: "nonce", type: "bytes32" },
+      { name: "v", type: "uint8" },
+      { name: "r", type: "bytes32" },
+      { name: "s", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+] as const;
+
+const EXPIRING_SOON_SECONDS = 3600n;
 const GAS_PAD_NUM = 12n; // +20% on the estimate, so a small drift between simulation and inclusion cannot fail the tx
 const GAS_PAD_DEN = 10n;
 
@@ -167,13 +188,69 @@ export class ViemChain implements ChainModule {
     };
   }
 
-  // Health checks, relayed cancel and the scheduler are T12 and T13 (SHOULD features).
-  async health(_doc: InvoiceDoc, _auth: BuyerAuth): Promise<{ ok: boolean; reason: HealthReason; balance: bigint }> {
-    throw new ChainError("NOT_IMPLEMENTED", "Health checks are not built yet.");
+  /**
+   * A snapshot, not a lock: could this authorization settle right now? Reads only, costs nothing.
+   * Order matches the mock: blocked, used or cancelled, low balance, expiring soon.
+   */
+  async health(doc: InvoiceDoc, auth: BuyerAuth): Promise<{ ok: boolean; reason: HealthReason; balance: bigint }> {
+    const inv = doc.invoice;
+    const hash = invoiceHash(inv, { chainId: this.cfg.chainId, verifyingContract: this.cfg.settler });
+    try {
+      await this.assertChain();
+      const [balance, used, blocked, block] = await Promise.all([
+        this.pub.readContract({ address: inv.token, abi: tokenAbi, functionName: "balanceOf", args: [auth.from] }) as Promise<bigint>,
+        this.pub.readContract({ address: inv.token, abi: tokenAbi, functionName: "authorizationState", args: [auth.from, hash] }) as Promise<boolean>,
+        // A token without a blocklist simply has no isBlocked: treat a failed read as "not blocked".
+        (this.pub.readContract({ address: inv.token, abi: tokenAbi, functionName: "isBlocked", args: [auth.from] }) as Promise<boolean>).catch(() => false),
+        this.pub.getBlock({ blockTag: "latest" }),
+      ]);
+      const reason: HealthReason = blocked
+        ? "BLOCKED"
+        : used
+          ? "AUTH_CANCELLED"
+          : balance < inv.amount
+            ? "LOW_BALANCE"
+            : auth.validBefore - block.timestamp < EXPIRING_SOON_SECONDS
+              ? "AUTH_EXPIRING"
+              : "NONE";
+      return { ok: reason === "NONE", reason, balance };
+    } catch (e) {
+      throw mapChainError(e);
+    }
   }
 
-  async cancelAuthorization(_from: Address, _nonce: Hex, _sig: { v: number; r: Hex; s: Hex }): Promise<{ txHash: Hex }> {
-    throw new ChainError("NOT_IMPLEMENTED", "Relayed cancellation is not built yet.");
+  /** Relays the buyer's signed CancelAuthorization (the buyer signs; the relayer pays the gas). Simulates first. */
+  async cancelAuthorization(from: Address, nonce: Hex, sig: { v: number; r: Hex; s: Hex }): Promise<{ txHash: Hex }> {
+    const token = this.cfg.tokens[0];
+    const call = { account: this.account, address: token, abi: tokenAbi, functionName: "cancelAuthorization", args: [from, nonce, sig.v, sig.r, sig.s] } as const;
+    let request: unknown;
+    let gas: bigint;
+    let gasPrice: bigint;
+    try {
+      await this.assertChain();
+      ({ request } = await this.pub.simulateContract(call));
+      gas = ((await this.pub.estimateContractGas(call)) * GAS_PAD_NUM) / GAS_PAD_DEN;
+      gasPrice = await this.pub.getGasPrice();
+    } catch (e) {
+      throw mapChainError(e);
+    }
+    const reservation = this.budget.reserve(gas * gasPrice);
+    let txHash: Hex;
+    try {
+      txHash = await this.wallet.writeContract({ ...(request as object), gas });
+    } catch (e) {
+      reservation.release();
+      throw mapChainError(e);
+    }
+    try {
+      const receipt = await this.pub.waitForTransactionReceipt({ hash: txHash, timeout: this.cfg.confirmTimeoutMs });
+      reservation.commit(receipt.gasUsed * receipt.effectiveGasPrice + (receipt.l1Fee ?? 0n));
+      if (receipt.status !== "success") throw new ChainError("SIMULATION_FAILED", "The cancellation failed on chain.", { txHash });
+    } catch (e) {
+      if (e instanceof ChainError) throw e;
+      throw new ChainError("PENDING", "The cancellation was sent but is not confirmed yet.", { txHash });
+    }
+    return { txHash };
   }
 
   startScheduler(): void {}

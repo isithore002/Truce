@@ -27,6 +27,12 @@ function revert(name: string) {
   return new ContractFunctionRevertedError({ abi: errorsAbi as never, data, functionName: "settle" });
 }
 
+function tokenRevert(reason: string) {
+  const abi = parseAbi(["error Error(string message)"]);
+  const data = encodeErrorResult({ abi, errorName: "Error", args: [reason] } as never);
+  return new ContractFunctionRevertedError({ abi: abi as never, data, functionName: "cancelAuthorization" });
+}
+
 function fakes(over: Partial<PublicApi> = {}) {
   const pub = {
     getChainId: vi.fn(async () => 1874),
@@ -204,11 +210,63 @@ describe("ViemChain.status", () => {
   });
 });
 
-describe("not built yet (T12, T13)", () => {
-  it("health and cancel say so plainly", async () => {
-    const { chain } = make();
+/** readContract answers by function name, so each health input can be set independently. */
+function reads(values: { balanceOf?: bigint; authorizationState?: boolean; isBlocked?: boolean | Error }) {
+  return vi.fn(async (args: { functionName: string }) => {
+    const v = (values as Record<string, unknown>)[args.functionName];
+    if (v instanceof Error) throw v;
+    return v;
+  });
+}
+
+describe("ViemChain.health (a snapshot, not a lock)", () => {
+  const healthy = { balanceOf: 2_000_000_000n, authorizationState: false, isBlocked: false };
+  const now = Math.floor(Date.now() / 1000);
+
+  async function check(values: Parameters<typeof reads>[0], validBeforeIn = 10 * 86_400) {
+    const { chain } = make({ readContract: reads({ ...healthy, ...values }) });
     const doc = await makeDoc();
-    await expect(chain.health(doc, await makeAuth(doc))).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
-    await expect(chain.cancelAuthorization(PAYOUT, TX, { v: 27, r: TX, s: TX })).rejects.toMatchObject({ code: "NOT_IMPLEMENTED" });
+    const auth = { ...(await makeAuth(doc)), validBefore: BigInt(now + validBeforeIn) };
+    return chain.health(doc, auth);
+  }
+
+  it("is OK when the balance covers the invoice, the authorization is unused and the wallet is not blocked", async () => {
+    expect(await check({})).toEqual({ ok: true, reason: "NONE", balance: 2_000_000_000n });
+  });
+  it("flags a low balance with the balance it saw", async () => {
+    expect(await check({ balanceOf: 5n })).toMatchObject({ ok: false, reason: "LOW_BALANCE", balance: 5n });
+  });
+  it("flags a used or cancelled authorization", async () => {
+    expect(await check({ authorizationState: true })).toMatchObject({ ok: false, reason: "AUTH_CANCELLED" });
+  });
+  it("flags a blocked wallet before anything else", async () => {
+    expect(await check({ isBlocked: true, balanceOf: 0n, authorizationState: true })).toMatchObject({ reason: "BLOCKED" });
+  });
+  it("flags an authorization that expires within an hour", async () => {
+    expect(await check({}, 600)).toMatchObject({ ok: false, reason: "AUTH_EXPIRING" });
+  });
+  it("treats a token without isBlocked as not blocked", async () => {
+    expect(await check({ isBlocked: new Error("execution reverted") })).toMatchObject({ ok: true, reason: "NONE" });
+  });
+  it("reports an unreachable chain instead of a false OK", async () => {
+    const { chain } = make({ readContract: vi.fn(async () => { throw new Error("fetch failed"); }) });
+    const doc = await makeDoc();
+    await expect(chain.health(doc, await makeAuth(doc))).rejects.toBeInstanceOf(ChainError);
+  });
+});
+
+describe("ViemChain.cancelAuthorization", () => {
+  it("simulates, then relays the buyer's signed cancel to the token", async () => {
+    const { chain, pub, wallet } = make();
+    const out = await chain.cancelAuthorization(PAYOUT, TX, { v: 27, r: TX, s: TX });
+    expect(out.txHash).toBe(TX);
+    expect(pub.simulateContract).toHaveBeenCalledTimes(1);
+    expect((pub.simulateContract as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0]).toMatchObject({ address: TRACK_USDT, functionName: "cancelAuthorization", args: [PAYOUT, TX, 27, TX, TX] });
+    expect(wallet.writeContract).toHaveBeenCalledTimes(1);
+  });
+  it("sends nothing when the simulation fails (already used or bad signature)", async () => {
+    const { chain, wallet } = make({ simulateContract: vi.fn(async () => { throw tokenRevert("TetherToken: auth invalid"); }) });
+    await expect(chain.cancelAuthorization(PAYOUT, TX, { v: 27, r: TX, s: TX })).rejects.toMatchObject({ code: "AUTH_INVALID" });
+    expect(wallet.writeContract).not.toHaveBeenCalled();
   });
 });
