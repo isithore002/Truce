@@ -138,3 +138,5 @@ html[data-hl="amount"] [data-field="amount"] {
 }
 @keyframes m-ang { to { --ang: 360deg; } }
 @keyframes m-route { from { opacity: 0; transform: translateY(14px) scale(.995); filter: blur(4px); } }
+/* headings on the dark payment-flow band stay white */
+.l-flow .l-sec-head h2 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #ffffff; }
