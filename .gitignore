@@ -24,3 +24,15 @@ Thumbs.db
 .docs/
 # test runner cache
 .vitest/
+
+# screen recordings, demo videos and voiceover audio (large binaries, kept out of the repo)
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.aac
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
